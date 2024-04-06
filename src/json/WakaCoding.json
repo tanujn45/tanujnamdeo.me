@@ -1,0 +1,123 @@
+{
+    "data": [
+      {
+        "range": {
+          "start": "2024-03-29T04:00:00Z",
+          "end": "2024-03-30T03:59:59Z",
+          "date": "2024-03-29",
+          "text": "Fri Mar 29th 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 0,
+          "minutes": 0,
+          "total_seconds": 0,
+          "digital": "0:00",
+          "decimal": "0.00",
+          "text": "0 secs"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-03-30T04:00:00Z",
+          "end": "2024-03-31T03:59:59Z",
+          "date": "2024-03-30",
+          "text": "Sat Mar 30th 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 0,
+          "minutes": 0,
+          "total_seconds": 0,
+          "digital": "0:00",
+          "decimal": "0.00",
+          "text": "0 secs"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-03-31T04:00:00Z",
+          "end": "2024-04-01T03:59:59Z",
+          "date": "2024-03-31",
+          "text": "Sun Mar 31st 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 0,
+          "minutes": 0,
+          "total_seconds": 0,
+          "digital": "0:00",
+          "decimal": "0.00",
+          "text": "0 secs"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-04-01T04:00:00Z",
+          "end": "2024-04-02T03:59:59Z",
+          "date": "2024-04-01",
+          "text": "Mon Apr 1st 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 0,
+          "minutes": 6,
+          "total_seconds": 404.593029,
+          "digital": "0:06",
+          "decimal": "0.10",
+          "text": "6 mins"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-04-02T04:00:00Z",
+          "end": "2024-04-03T03:59:59Z",
+          "date": "2024-04-02",
+          "text": "Tue Apr 2nd 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 4,
+          "minutes": 2,
+          "total_seconds": 14555.83703,
+          "digital": "4:02",
+          "decimal": "4.03",
+          "text": "4 hrs 2 mins"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-04-03T04:00:00Z",
+          "end": "2024-04-04T03:59:59Z",
+          "date": "2024-04-03",
+          "text": "Wed Apr 3rd 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 8,
+          "minutes": 30,
+          "total_seconds": 30648.139853,
+          "digital": "8:30",
+          "decimal": "8.50",
+          "text": "8 hrs 30 mins"
+        }
+      },
+      {
+        "range": {
+          "start": "2024-04-04T04:00:00Z",
+          "end": "2024-04-05T03:59:59Z",
+          "date": "2024-04-04",
+          "text": "Thu Apr 4th 2024",
+          "timezone": "America/New_York"
+        },
+        "grand_total": {
+          "hours": 3,
+          "minutes": 7,
+          "total_seconds": 11260.431254,
+          "digital": "3:07",
+          "decimal": "3.12",
+          "text": "3 hrs 7 mins"
+        }
+      }
+    ]
+  }
