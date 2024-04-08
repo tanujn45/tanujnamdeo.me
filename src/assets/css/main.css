@@ -39,28 +39,17 @@ body {
 }
 
 p {
+  font-family: "Fira Sans", sans-serif;
+  margin-top: 15px;
+  margin-bottom: 15px;
   line-height: 1.5;
-  font-family: "Roboto Mono", monospace;
-}
-
-hr {
-  border: 0;
-  border-top: 3px dotted var(--bordercl);
-  margin: 1em 0;
-}
-
-blockquote {
-  border-left: 3px solid var(--bordercl);
-  color: #737373;
-  margin: 0;
-  padding-left: 1em;
 }
 
 a {
   border-bottom: 3px solid var(--maincolor);
   color: inherit;
   text-decoration: none;
-  font-family: "Roboto Mono", monospace;
+  /* font-family: "Roboto Mono", monospace; */
 }
 
 a:hover {
@@ -89,63 +78,6 @@ ul > li::before {
   font-weight: bold;
 }
 
-/* Images */
-img {
-  border: 3px solid #ececec;
-  max-width: 100%;
-}
-
-figure {
-  box-sizing: border-box;
-  display: inline-block;
-  margin: 0;
-  max-width: 100%;
-}
-
-figure img {
-  max-height: 500px;
-}
-
-@media screen and (min-width: 600px) {
-  figure {
-    padding: 0 40px;
-  }
-}
-
-figure h4 {
-  font-size: 1rem;
-  margin: 0;
-  margin-bottom: 1em;
-}
-figure h4::before {
-  content: "↳ ";
-}
-
-/* Code blocks */
-code {
-  background-color: #f1f1f1;
-  padding: 0.1em 0.2em;
-}
-
-pre {
-  background-color: #ececec;
-  line-height: 1.4;
-  overflow-x: auto;
-  padding: 1em;
-}
-
-.highlight pre ::selection {
-  background: rgba(255, 255, 255, 0.2);
-  color: inherit;
-}
-
-pre code {
-  background-color: transparent;
-  color: inherit;
-  font-size: 100%;
-  padding: 0;
-}
-
 /* Containers */
 .content {
   /* margin-bottom: 4em; */
@@ -155,6 +87,7 @@ pre code {
   padding: 0 1ch;
   word-wrap: break-word;
   overflow: hidden;
+  min-height: 100vh;
 }
 
 /* Header */
@@ -168,19 +101,14 @@ header {
 }
 
 header .main {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 500;
 }
 
 header nav a {
   margin-left: 5px;
   margin-right: 5px;
-  font-weight: 400;
   padding-bottom: 3px;
-}
-
-.margin-reset {
-  margin-top: 0;
 }
 
 h1,
@@ -189,7 +117,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-size: 1.2rem;
+  font-size: 18px;
   margin-top: 1.5em;
   font-weight: 450;
   font-family: "Roboto Mono", monospace;
@@ -280,10 +208,19 @@ h1 {
 footer {
   font-family: "Roboto Mono", monospace;
   border-top: 3px dotted var(--bordercl);
-  padding: 0.5rem 0rem;
-  margin-top: 4rem;
-  margin-bottom: 4rem;
+  padding: 1rem 0rem;
+  margin-top: 1rem;
+  margin-bottom: 3rem;
   text-align: center;
+}
+
+footer a {
+  padding-bottom: 4px;
+}
+
+footer img {
+  height: 1rem;
+  width: 1rem;
 }
 
 /* Common */
@@ -296,124 +233,49 @@ time {
   font-family: "Roboto Mono", monospace;
 }
 
-/* Posts */
-article .title {
-  margin-bottom: 1em;
-}
-
-/* Callout */
-.callout {
-  background-color: var(--callouctcolor);
-  color: #fff;
-  padding: 1em;
-}
-
-.callout p {
-  font-family: "IBM Plex Mono", monospace;
-  margin: 0;
-}
-
-.callout a {
-  border-bottom: 3px solid #fff;
-}
-
-.callout a:hover {
-  background-color: #fff;
-  color: var(--callouctcolor);
-}
-
-.site-description {
-  display: flex;
-  justify-content: space-between;
-}
-.tags li::before {
-  content: "🏷 ";
-}
-.tags a {
-  border-bottom: 3px solid var(--maincolor);
-}
-.tags a:hover {
-  color: white;
-  background-color: var(--hovercolor);
-}
 svg {
   max-height: 15px;
 }
-.soc:hover {
-  color: white;
-}
-.draft-label {
-  color: var(--bordercl);
-  text-decoration: none;
-  padding: 2px 4px;
-  border-radius: 4px;
-  margin-left: 6px;
-  background-color: #f9f2f4;
-}
-.highlight {
-  position: relative;
-  -webkit-overflow-scrolling: touch;
-}
-.highlight pre code[class*="language-"] {
-  -webkit-overflow-scrolling: touch;
-}
-.highlight pre code[class*="language-"]::before {
-  background: black;
-  border-radius: 0 0 0.25rem 0.25rem;
-  color: white;
-  font-size: 12px;
-  letter-spacing: 0.025rem;
-  padding: 0.1rem 0.5rem;
-  position: absolute;
-  right: 1rem;
-  text-align: right;
-  text-transform: uppercase;
-  top: 0;
+
+.description {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 
-.highlight pre code[class="language-javaScript"]::before,
-.highlight pre code[class="language-js"]::before {
-  content: "js";
-  background: #f7df1e;
-  color: black;
+.read-more-button {
+  font-family: "Roboto Mono", monospace;
 }
-.highlight pre code[class*="language-yml"]::before,
-.highlight pre code[class*="language-yaml"]::before {
-  content: "yaml";
-  background: #f71e6a;
-  color: white;
+
+/* Figures and Images */
+img {
+  /* border: 3px solid #ececec; */
+  max-width: 100%;
 }
-.highlight pre code[class*="language-shell"]::before,
-.highlight pre code[class*="language-bash"]::before,
-.highlight pre code[class*="language-sh"]::before {
-  content: "shell";
-  background: green;
-  color: white;
+
+figure {
+  box-sizing: border-box;
+  display: inline-block;
+  margin: 0;
+  max-width: 100%;
 }
-.highlight pre code[class*="language-json"]::before {
-  content: "json";
-  background: dodgerblue;
-  color: #000000;
+
+/* figure img {
+  max-height: 500px;
+} */
+
+@media screen and (min-width: 600px) {
+  figure {
+    padding: 0 40px;
+  }
 }
-.highlight pre code[class*="language-python"]::before,
-.highlight pre code[class*="language-py"]::before {
-  content: "py";
-  background: blue;
-  color: yellow;
+
+figure h4 {
+  font-size: 1rem;
+  margin: 0;
+  margin-bottom: 1em;
 }
-.highlight pre code[class*="language-css"]::before {
-  content: "css";
-  background: cyan;
-  color: black;
-}
-.highlight pre code[class*="language-go"]::before {
-  content: "Go";
-  background: cyan;
-  color: royalblue;
-}
-.highlight pre code[class*="language-md"]::before,
-.highlight pre code[class*="language-md"]::before {
-  content: "Markdown";
-  background: royalblue;
-  color: whitesmoke;
+figure h4::before {
+  content: "↳ ";
 }

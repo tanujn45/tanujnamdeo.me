@@ -5,6 +5,7 @@
         "duration": "Oct 2023 – Present",
         "position": "Research Associate",
         "location": "State College, PA",
+        "link": "/a11y",
         "responsibilities": [
           "Spearheaded Android app development at Penn State's A11y(Accessibility) Lab, prioritizing gesture detection & speech synthesis for disabled communication.",
           "Developed and implemented an innovative app leveraging cutting-edge machine learning models for real-time gesture detection, significantly enhancing communication speed from 10 to 60 words per minute.",
@@ -16,6 +17,7 @@
         "duration": "Aug 2021 – May 2023",
         "position": "Graduate Assistant",
         "location": "State College, PA",
+        "link": "/psu",
         "responsibilities": [
           "Facilitated learning for three distinct courses, including CMPSC 201: Programming for Engineers with C++, CMPSC 101: Introduction to Programming with Python, and AERSP 424: Advanced Computer Programming.",
           "Mentored and guided over 320 students, with student evaluations indicating a 97% satisfaction rate and improvement in troubleshooting proficiency.",
@@ -27,6 +29,7 @@
         "duration": "Mar 2021 – Jul 2021",
         "position": "Software Developer Intern",
         "location": "Pune, India",
+        "link": "/emotorad",
         "responsibilities": [
           "Engineered Emotorad's e-commerce site, achieving a 25% increase in engagement through the strategic use of React, Redux, Django, and MongoDB.",
           "Enhanced site performance, cutting load times and adeptly handling a 37% traffic increase, ensuring seamless scalability."
@@ -37,6 +40,7 @@
         "duration": "Mar 2020 – Jul 2020",
         "position": "Software Developer Intern",
         "location": "Indore, India",
+        "link": "/muniversiti",
         "responsibilities": [
           "Spearheaded the creation of the MU20 Education Outreach app using React Native, revolutionizing high school learning experiences.",
           "Orchestrated a collaborative team of 5 interns, driving agile development strategies to meet educational transformation objectives."
