@@ -15,24 +15,15 @@ const PennState = () => {
           <br />
           <time>Fall 2021</time>
           <p>
-            <a>A11y Lab</a>, a research unit within Penn State's College of
-            Information Science and Technology (IST), specializes in
-            Human-Computer Interaction (HCI) with a focus on Accessible
-            Computing. Its mission is to understand and enhance technology's
-            interaction with human abilities.
-          </p>
-          <p>
-            Through innovative methodologies such as human-AI teaming and
-            inclusive design, it develops intelligent technologies catering to
-            diverse needs. The lab pioneers solutions fostering inclusivity and
-            accessibility, creating opportunities for individuals from all
-            backgrounds.
+            The course entails learning to develop and utilize algorithms within
+            a procedure-oriented programming language, with a specific focus on
+            numerical methods relevant to engineering applications.
           </p>
         </section>
 
         <section>
           <h2>CMPSC 101: Introduction to Programming</h2>
-          <time>Dr. Roger Christman</time>
+          <time>Mr. Roger Christman</time>
           <br />
           <time>Spring 2022, Fall 2022</time>
           <p>
@@ -41,14 +32,14 @@ const PennState = () => {
             conditions, functions, and data types.
           </p>
           <p>
-            Students will learn to solve problems by breaking them down into
-            smaller parts, implementing solutions step by step, and evaluating
-            their effectiveness. The emphasis is on understanding
-            problem-solving techniques, abstraction, and evaluating code for
-            correctness and efficiency.
+            Students learn to solve problems by breaking them down into smaller
+            parts, implementing solutions step by step, and evaluating their
+            effectiveness. The emphasis is on understanding problem-solving
+            techniques, abstraction, and evaluating code for correctness and
+            efficiency.
           </p>
           <p>
-            By the end, students will be skilled in designing and analyzing
+            By the end, students are skilled in designing and analyzing
             computational solutions across various levels of abstraction, using
             imperative programming principles.
           </p>
