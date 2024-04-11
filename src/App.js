@@ -1,5 +1,10 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import React, { useLayoutEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { useState } from "react";
 import { GitHub, Linkedin, Twitter, Sun, Moon, Mail } from "react-feather";
 import YouTube from "react-youtube";
@@ -13,6 +18,9 @@ import Emotorad from "./assets/components/Emotorad";
 import A11y from "./assets/components/A11y";
 import Muniversiti from "./assets/components/Muniversiti";
 import PennState from "./assets/components/PennState";
+import Harbor365 from "./assets/components/Harbor365";
+import Explodely from "./assets/components/Explodely";
+import ScrollToTop from "./assets/components/ScrollToTop.js";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
@@ -37,6 +45,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className={`${darkMode ? "dark-mode" : ""}`}>
         <div className="container">
           <div className="content">
@@ -69,15 +78,17 @@ function App() {
               <Route path="/a11y" element={<A11y />} />
               <Route path="/muniversiti" element={<Muniversiti />} />
               <Route path="/psu" element={<PennState />} />
+              <Route path="/harbor365" element={<Harbor365 />} />
+              <Route path="/explodely" elemen={<Explodely />} />
             </Routes>
 
             {/* Footer */}
             <footer>
-              <a href="https://github.com/athul/archie" title="GitHub">
+              <a href="https://github.com/tanujn45" title="GitHub">
                 <GitHub />
               </a>
               |
-              <a href="https://gitlab.com/athul/" title="LinkedIn">
+              <a href="https://linkedin.com/in/tanujn45" title="LinkedIn">
                 <Linkedin />
               </a>
               |
@@ -89,7 +100,10 @@ function App() {
                 <Mail />
               </a>
               | ⚡️ 2024 © Tanuj |
-              <a className="ms-2" href="#">
+              <a
+                className="ms-2"
+                href="https://docs.google.com/document/d/1o6xpcMS8J0OgwSU7WSjYIusosPSIMjTZ/edit?usp=sharing&ouid=109146895845937403698&rtpof=true&sd=true"
+              >
                 Resume
               </a>
               |

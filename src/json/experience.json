@@ -1,50 +1,48 @@
 {
-    "experience": [
-      {
-        "company": "A11y Lab",
-        "duration": "Oct 2023 – Present",
-        "position": "Research Associate",
-        "location": "State College, PA",
-        "link": "/a11y",
-        "responsibilities": [
-          "Spearheaded Android app development at Penn State's A11y(Accessibility) Lab, prioritizing gesture detection & speech synthesis for disabled communication.",
-          "Developed and implemented an innovative app leveraging cutting-edge machine learning models for real-time gesture detection, significantly enhancing communication speed from 10 to 60 words per minute.",
-          "Conducted comprehensive data collection from 3 disabled volunteers, optimizing data quality via 15 recorded daily gestures per volunteer."
-        ]
-      },
-      {
-        "company": "The Pennsylvania State University",
-        "duration": "Aug 2021 – May 2023",
-        "position": "Graduate Assistant",
-        "location": "State College, PA",
-        "link": "/psu",
-        "responsibilities": [
-          "Facilitated learning for three distinct courses, including CMPSC 201: Programming for Engineers with C++, CMPSC 101: Introduction to Programming with Python, and AERSP 424: Advanced Computer Programming.",
-          "Mentored and guided over 320 students, with student evaluations indicating a 97% satisfaction rate and improvement in troubleshooting proficiency.",
-          "Assisted in grading over 1,000 assignments and exams, with my structured feedback approach adopted across the course for its effectiveness in student improvement."
-        ]
-      },
-      {
-        "company": "Emotorad",
-        "duration": "Mar 2021 – Jul 2021",
-        "position": "Software Developer Intern",
-        "location": "Pune, India",
-        "link": "/emotorad",
-        "responsibilities": [
-          "Engineered Emotorad's e-commerce site, achieving a 25% increase in engagement through the strategic use of React, Redux, Django, and MongoDB.",
-          "Enhanced site performance, cutting load times and adeptly handling a 37% traffic increase, ensuring seamless scalability."
-        ]
-      },
-      {
-        "company": "Muniversiti",
-        "duration": "Mar 2020 – Jul 2020",
-        "position": "Software Developer Intern",
-        "location": "Indore, India",
-        "link": "/muniversiti",
-        "responsibilities": [
-          "Spearheaded the creation of the MU20 Education Outreach app using React Native, revolutionizing high school learning experiences.",
-          "Orchestrated a collaborative team of 5 interns, driving agile development strategies to meet educational transformation objectives."
-        ]
-      }
-    ]
-  }
+  "experience": [
+    {
+      "company": "A11y Lab",
+      "duration": "Oct 2023 – Present",
+      "position": "Research Associate",
+      "location": "State College, PA",
+      "link": "/a11y",
+      "responsibilities": [
+        "Revolutionizing tech accessibility with cutting-edge tools and user-centric strategies.",
+        "Leading A11y efforts, creating tech solutions that empower users of all abilities."
+      ]
+    },
+    {
+      "company": "The Pennsylvania State University",
+      "duration": "Aug 2021 – May 2023",
+      "position": "Graduate Assistant",
+      "location": "State College, PA",
+      "link": "/psu",
+      "responsibilities": [
+        "Served as a Teaching Assistant for CMPSC 201, CMPSC 101, and AERSP 424.",
+        "Demonstrated proficiency in Python, C++, Java, and Matlab during TA roles."
+      ]
+    },
+    {
+      "company": "Emotorad",
+      "duration": "Mar 2021 – Jul 2021",
+      "position": "Software Developer Intern",
+      "location": "Pune, India",
+      "link": "/emotorad",
+      "responsibilities": [
+        "Led creation of digital sales platform, utilizing modern tech stack for optimal performance.",
+        "Designed captivating user interface, amplifying Emotorad's online market presence and revenue."
+      ]
+    },
+    {
+      "company": "Muniversiti",
+      "duration": "Mar 2020 – Jul 2020",
+      "position": "Software Developer Intern",
+      "location": "Indore, India",
+      "link": "/muniversiti",
+      "responsibilities": [
+        "Orchestrated digital platform development, optimizing web and mobile experiences with cutting-edge technologies for Muniversiti's educational initiatives.",
+        "Enhanced Muniversiti's outreach and engagement through strategic website launch and innovative mobile app implementation."
+      ]
+    }
+  ]
+}

@@ -101,14 +101,9 @@ function Home() {
             </h2>
             <time>{job.duration}</time>
             <ul>
-              <li>
-                Description of the project. Lorem ipsum dolor sit amet,
-                consectetur adipiscing elit.
-              </li>
-              <li>
-                Description of the project. Lorem ipsum dolor sit amet,
-                consectetur adipiscing elit.
-              </li>
+              {job.responsibilities.map((role, index) => (
+                <li key={index}>{role}</li>
+              ))}
             </ul>
             <Link className="read-more-button" to={job.link}>
               Read more ⟶
@@ -153,42 +148,73 @@ function Home() {
         <h1>Projects</h1>
         <div className="read-more">
           <h2>
-            <a>Project 1</a>
+            <a>Global TweetScan: Unveiling Agendas in Digital Shadows</a>
           </h2>
           <p>
-            Description of the project. Lorem ipsum dolor sit amet, consectetur
-            adipiscing elit. Sed do eiusmod tempor incididunt ut labore et
-            dolore magna aliqua.
+            In this project, I spearheaded an advanced analysis of the Twitter
+            Information Operations (IO) dataset, employing cutting-edge
+            translation and natural language processing techniques to decode and
+            scrutinize tweets and associated media from various countries. The
+            focus was on applying sentiment and topic analysis to uncover
+            potential agendas, without delving into specific results. This
+            approach involved a meticulous examination of digital content to
+            understand the dynamics of information dissemination and the
+            strategic use of social media by government and non-government
+            entities for potential agenda propagation.
           </p>
-          <Link className="read-more-button" to="/">
-            Read more ⟶
-          </Link>
+          <a className="read-more-button" href="/">
+            Github ⟶
+          </a>
         </div>
         <div className="read-more">
           <h2>
-            <a>Project 2</a>
+            <a>CosmoNFT</a>
           </h2>
           <p>
-            Description of the project. Lorem ipsum dolor sit amet, consectetur
-            adipiscing elit. Sed do eiusmod tempor incididunt ut labore et
-            dolore magna aliqua.
+            At the helm of CosmoPunk Studio, I engineered a groundbreaking
+            platform democratizing NFT creation. With a single click, users
+            generate their distinctive NFTs using the ERC-721 standard, directly
+            on the blockchain. Upon minting, they receive a unique link
+            redirecting them to OpenSea, where they can proudly view and
+            showcase their newly minted digital assets. This seamless
+            integration enriches the user experience, facilitating exploration
+            and engagement within the vibrant NFT ecosystem.
           </p>
-          <Link className="read-more-button" to="/">
-            Read more ⟶
-          </Link>
+          <a className="read-more-button" href="https://cosmopunk.netlify.app/">
+            Try it ⟶
+          </a>
         </div>
         <div className="read-more">
           <h2>
-            <a>Project 3</a>
+            <a>CosmoChat</a>
           </h2>
           <p>
-            Description of the project. Lorem ipsum dolor sit amet, consectetur
-            adipiscing elit. Sed do eiusmod tempor incididunt ut labore et
-            dolore magna aliqua.
+            CosmoChat is a dynamic project I spearheaded, leveraging blockchain
+            technology to transform communication. With a focus on simplicity
+            and security, users connect their crypto wallets to exchange
+            messages directly on the blockchain. By prioritizing privacy and
+            efficiency, CosmoChat pioneers a new era of decentralized messaging,
+            setting a standard for secure digital interactions.
           </p>
-          <Link className="read-more-button" to="/">
-            Read more ⟶
-          </Link>
+          <a className="read-more-button" href="https://cosmochat.netlify.app/">
+            Try it ⟶
+          </a>
+        </div>
+        <div className="read-more">
+          <h2>
+            <a>
+              Spatial-Temporal Deep Leaning for Preference Prediction based on
+              EEG Brainware data
+            </a>
+          </h2>
+          <p>
+            Leveraged cutting-edge deep learning methodologies, specifically
+            employing a BiLSTM model, to accurately forecast user preferences
+            via EEG brainwave data analysis. Executed comprehensive model
+            training and rigorous testing procedures utilizing the DEAP dataset,
+            showcasing adeptness in both innovation and practical application
+            within the field.
+          </p>
         </div>
       </section>
     </main>

@@ -32,9 +32,16 @@ const A11y = () => {
 
       <section>
         <h2>Job Description</h2>
-        <p className="description">
-          Developed a native android application using Java to record Movesense
-          IMU sensor data.
+        <p>
+          Developed Android application utilizing Movesense IMU sensor for
+          recording IMU data, initiating the project's foundation.
+        </p>
+        <p>
+          Spearheaded the implementation of a Bluetooth screen within the
+          application, enabling seamless connectivity by storing previously
+          connected devices and conducting real-time scans for new available
+          devices, enhancing user experience and facilitating quick device
+          pairing.
         </p>
         <div className="row justify-content-center mt-4">
           <div className="col-6">
@@ -54,24 +61,48 @@ const A11y = () => {
             </figure>
           </div>
         </div>
-        <p className="description">
-          Developed a Python application that can annotate the recorded data
-          resulting in decreased time and effort.
+        <p>
+          Conducted data collection from a special needs participant, refining
+          data acquisition techniques.
         </p>
+        <p>
+          Evaluated and compared various machine learning algorithms to enhance
+          gesture detection accuracy, ensuring optimal performance.
+        </p>
+        <p>
+          Recognized the necessity of video feed for precise data preparation,
+          integrated camera recording functionality into the application.
+        </p>
+        <p>
+          Initiated development of Python-based annotation and visualization
+          tool to streamline data preparation, reducing processing time by a
+          minimum of 80% in initial testing.
+        </p>
+
         <figure>
           <img src={annotateTool} alt="annotateTool" />
           <figcaption>
             <h4>Annotation tool</h4>
           </figcaption>
         </figure>
-        <p className="description">
-          Conducted comprehensive data collection from 3 disabled volunteers,
-          optimizing data quality via 15 recorded daily gestures per volunteer.
-        </p>
       </section>
       <section>
         <h2>Future work</h2>
-        <p>Let users annotate their own data within the device itself.</p>
+        <p>
+          Designed and implemented annotation and visualization tools, currently
+          undergoing rigorous testing phase to ensure reliability and
+          functionality.
+        </p>
+        <p>
+          Planned future data collection efforts with a diverse group of
+          participants, enhancing dataset diversity and model robustness.
+        </p>
+        <p>
+          Scheduled implementation of annotation and visualization tools into
+          the Android application, enabling users to record and process their
+          own data, facilitating personalized machine learning model adjustments
+          for improved accuracy.
+        </p>
       </section>
       <ul>
         <Link className="read-more-button" to="/">
