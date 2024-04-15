@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import phoneScreen from "../img/explodely/phone_screen.png";
 import analytics1 from "../img/explodely/analytics_1.png";
 import analytics2 from "../img/explodely/analytics_2.png";
