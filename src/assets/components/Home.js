@@ -82,13 +82,31 @@ function Home() {
       </section>
 
       {/* Introduction */}
-      <section>
+      <section className="intro">
         <h1>Introduction</h1>
-        <ul>
-          <li>
-            Research Associate @ <a>A11y lab</a> | Penn State
-          </li>
-        </ul>
+        <p className="description">
+          🔬 Research Associate:{" "}
+          <a href="https://a11y.ist.psu.edu/" target="_blank">
+            A11y Labs
+          </a>{" "}
+          @ Penn State
+        </p>
+        <p className="description">
+          🔭 Personal projects I am working on:{" "}
+          <a
+            href="https://tanujn45.notion.site/2fb9b63c4ab74a8e980b10a041b09866?v=83bc88bdb1a84582ab3a4d8f8ff6c71d&pvs=4"
+            target="_blank"
+          >
+            Project Management Board
+          </a>
+        </p>
+        <p className="description">🌱 Currently learning: Blockchain</p>
+        <p className="description">
+          📫 Reach out:
+          <a href="mailto:tanujn45@gmail.com" title="Mail">
+            tanujn45@gmail.com
+          </a>
+        </p>
       </section>
 
       {/* Work Experience */}
@@ -162,7 +180,11 @@ function Home() {
             strategic use of social media by government and non-government
             entities for potential agenda propagation.
           </p>
-          <a className="read-more-button" href="/">
+          <a
+            className="read-more-button"
+            href="https://github.com/tanujn45/Twitter-IO"
+            target="_blank"
+          >
             Github ⟶
           </a>
         </div>

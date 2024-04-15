@@ -25,8 +25,8 @@
     {
       "company": "Emotorad",
       "duration": "Mar 2021 – Jul 2021",
-      "position": "Software Developer Intern",
-      "location": "Pune, India",
+      "position": "Software Developer",
+      "location": "Remote",
       "link": "/emotorad",
       "responsibilities": [
         "Led creation of digital sales platform, utilizing modern tech stack for optimal performance.",
@@ -36,12 +36,23 @@
     {
       "company": "Muniversiti",
       "duration": "Mar 2020 – Jul 2020",
-      "position": "Software Developer Intern",
+      "position": "Software Developer",
       "location": "Indore, India",
       "link": "/muniversiti",
       "responsibilities": [
         "Orchestrated digital platform development, optimizing web and mobile experiences with cutting-edge technologies for Muniversiti's educational initiatives.",
         "Enhanced Muniversiti's outreach and engagement through strategic website launch and innovative mobile app implementation."
+      ]
+    },
+    {
+      "company": "Explodely",
+      "duration": "Mar 2021 – Jul 2021",
+      "position": "Software Developer",
+      "location": "Remote",
+      "link": "/explodely",
+      "responsibilities": [
+        "Developed intuitive front-end features for the affiliate portal, enhancing user engagement and tool accessibility.",
+        " Engineered responsive interfaces for the seller portal, optimizing transaction flows and user experience. Fixed bugs and performance issues to ensure that the platform was stable and reliable for users."
       ]
     }
   ]

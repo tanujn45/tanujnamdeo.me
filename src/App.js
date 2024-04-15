@@ -55,13 +55,13 @@ function App() {
                 <a href="/">Tanuj Namdeo</a>
               </div>
               <nav>
-                <a href="https://github.com/tanujn45">
+                <a href="https://github.com/tanujn45" target="_blank">
                   <GitHub />
                 </a>
-                <a href="https://linkedin.com/in/tanujn45">
+                <a href="https://linkedin.com/in/tanujn45" target="_blank">
                   <Linkedin />
                 </a>
-                <a href="https://twitter.com/tanujn45">
+                <a href="https://twitter.com/tanujn45" target="_blank">
                   <Twitter />
                 </a>
                 <span>|</span>
@@ -79,30 +79,43 @@ function App() {
               <Route path="/muniversiti" element={<Muniversiti />} />
               <Route path="/psu" element={<PennState />} />
               <Route path="/harbor365" element={<Harbor365 />} />
-              <Route path="/explodely" elemen={<Explodely />} />
+              <Route path="/explodely" element={<Explodely />} />
             </Routes>
 
             {/* Footer */}
             <footer>
-              <a href="https://github.com/tanujn45" title="GitHub">
+              <a
+                href="https://github.com/tanujn45"
+                title="GitHub"
+                target="_blank"
+              >
                 <GitHub />
               </a>
               |
-              <a href="https://linkedin.com/in/tanujn45" title="LinkedIn">
+              <a
+                href="https://linkedin.com/in/tanujn45"
+                title="LinkedIn"
+                target="_blank"
+              >
                 <Linkedin />
               </a>
               |
-              <a href="https://twitter.com/tanujn45" title="Twitter">
+              <a
+                href="https://twitter.com/tanujn45"
+                title="Twitter"
+                target="_blank"
+              >
                 <Twitter />
               </a>
               |
-              <a href="mailto:tanujn45@gmail.com" title="Mail">
+              <a href="mailto:tanujn45@gmail.com" title="Mail" target="_blank">
                 <Mail />
               </a>
               | ⚡️ 2024 © Tanuj |
               <a
                 className="ms-2"
                 href="https://docs.google.com/document/d/1o6xpcMS8J0OgwSU7WSjYIusosPSIMjTZ/edit?usp=sharing&ouid=109146895845937403698&rtpof=true&sd=true"
+                target="_blank"
               >
                 Resume
               </a>
