@@ -65,6 +65,11 @@ const Explodely = () => {
           issues to ensure that the platform was stable and reliable for users.
         </p>
       </section>
+      <ul>
+        <Link className="read-more-button" to="/">
+          ← Home
+        </Link>
+      </ul>
     </main>
   );
 };
