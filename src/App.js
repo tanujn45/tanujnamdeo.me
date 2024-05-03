@@ -114,7 +114,7 @@ function App() {
               | ⚡️ 2024 © Tanuj |
               <a
                 className="ms-2"
-                href="https://docs.google.com/document/d/1o6xpcMS8J0OgwSU7WSjYIusosPSIMjTZ/edit?usp=sharing&ouid=109146895845937403698&rtpof=true&sd=true"
+                href="https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing"
                 target="_blank"
               >
                 Resume

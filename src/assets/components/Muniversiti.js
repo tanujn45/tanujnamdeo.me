@@ -8,7 +8,7 @@ const Muniversiti = () => {
   return (
     <main>
       <h1>Muniversiti</h1>
-      <time>Software Developer</time>
+      <time>Software Development Engineer</time>
 
       <section>
         <h2>About Muniversiti</h2>
@@ -25,10 +25,8 @@ const Muniversiti = () => {
       <section>
         <h2>Role</h2>
         <p>
-          Led the creation and strategic launch of Muniversiti’s website,
-          masterfully integrating Figma for designing the UI, and LAMP stack
-          along with Bootstrap for development to elevate the platform's online
-          presence and enhance user interactivity.
+          Spearheaded full-cycle development of educational platforms, achieving
+          a 40% increase in user activity and reducing operational costs by 30%.
         </p>
         <figure>
           <img src={muniversiti} alt="muniversiti" />
@@ -37,26 +35,28 @@ const Muniversiti = () => {
           </figcaption>
         </figure>
         <p>
-          Efficiently coordinated the online registration process for the IWS
-          conference, significantly boosting Muniversiti's visibility and
-          outreach within the educational community and beyond, fostering
-          substantial growth in participation.
+          Led Agile team through daily stand-ups and bi-weekly sprints,
+          optimizing project execution and fostering continuous improvement.
         </p>
         <p>
-          Spearheaded the development of the UpSkill mobile app, creatively
-          integrating React Native, Express, and Firebase, to broaden
-          educational offerings and provide an interactive learning experience
-          for users.
+          Engineered scalable web architecture using React, Node.js, Express,
+          and MongoDB, enhancing dynamic content management and system
+          performance.
         </p>
         <p>
-          Implemented an innovative social media login feature for the UpSkill
-          app, streamlining the access process and significantly increasing user
-          engagement through easier onboarding and connectivity.
+          Developed feature-rich cross-platform mobile app with React Native,
+          enabling offline access, push notifications, and real-time
+          interactions.
         </p>
         <p>
-          Directed a dedicated team in the optimization of UpSkill's UI/UX
-          design, making significant improvements in navigation and overall user
-          satisfaction, resulting in a more intuitive user experience.
+          mplemented Jest and Detox testing frameworks, managing CI/CD pipelines
+          with Jenkins, Docker, and Kubernetes on AWS to ensure robust product
+          quality and reliability.
+        </p>
+        <p>
+          Facilitated collaborative development environment with Git,
+          emphasizing feature-branch strategy and rigorous code reviews via pull
+          requests for enhanced code stability and system integrity.
         </p>
         <div className="row justify-content-center mt-4">
           <div className="col">

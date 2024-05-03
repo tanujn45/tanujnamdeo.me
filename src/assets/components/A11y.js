@@ -10,7 +10,7 @@ const A11y = () => {
       <h1>
         <a>A11y lab @ Penn State</a>
       </h1>
-      <time>Research Associate</time>
+      <time>Software Developer</time>
 
       <section>
         <h2>About A11y</h2>

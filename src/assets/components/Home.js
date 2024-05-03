@@ -85,7 +85,7 @@ function Home() {
       <section className="intro">
         <h1>Introduction</h1>
         <p className="description">
-          🔬 Research Associate:{" "}
+          🔬 Software Developer:{" "}
           <a href="https://a11y.ist.psu.edu/" target="_blank">
             A11y Labs
           </a>{" "}
@@ -137,14 +137,14 @@ function Home() {
           <h2>
             <a>The Pennsylvania State University</a>
           </h2>
-          <time>Aug 2023, University Park</time>
+          <time>Aug 2021 - Aug 2023, University Park</time>
           <p>MS, Computer Science & Engineering</p>
         </div>
         <div>
           <h2>
             <a>Symbiosis University of Applied Sciences</a>
           </h2>
-          <time>Aug 2023, Indore</time>
+          <time>Aug 2017 - May 2021, Indore</time>
           <p>BTech, Computer Science & Information Technology</p>
           <ul>
             <li>
