@@ -1,15 +1,7 @@
 [build]
   command = "npm run build"
-  publish = "build"
+  publish = "dist"
 
-# Netlify sets CI=true, which makes react-scripts treat lint warnings as
-# build errors. The warnings here are pre-existing and harmless.
-[build.environment]
-  CI = "false"
-
-# Single-page app: serve index.html for any path the CDN has no file for,
-# so React Router can handle deep links, refreshes and shared URLs.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Astro emits dist/404.html, which Netlify serves automatically for unmatched
+# paths with a real 404 status. No SPA catch-all redirect: the old one rewrote
+# every path to index.html and returned 200 for pages that don't exist.

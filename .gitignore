@@ -9,6 +9,7 @@
 /coverage
 
 # production
+/dist
 /build
 
 # misc
@@ -27,3 +28,6 @@ yarn-error.log*
 
 # Claude Code local config
 .claude/
+
+# astro
+.astro/

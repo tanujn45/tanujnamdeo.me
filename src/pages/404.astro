@@ -1,0 +1,35 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="404 — Tanuj Namdeo" description="Page not found.">
+  <main>
+    <h1>404</h1>
+
+    <pre class="terminal"><span class="prompt">$</span> cd <span
+        id="bad-path">/</span
+      >
+bash: cd: <span class="bad-path-echo">/</span>: No such file or directory
+<span class="prompt">$</span> ls
+about experience education projects</pre>
+
+    <p>
+      This page either moved or never existed. The listing above is roughly what
+      you'll find back on the home page.
+    </p>
+
+    <ul>
+      <a class="read-more-button" href="/">← Home</a>
+    </ul>
+  </main>
+</Layout>
+
+<script>
+  // The path isn't known at build time, so fill it in on load.
+  const path = window.location.pathname;
+  const primary = document.getElementById("bad-path");
+  if (primary) primary.textContent = path;
+  document
+    .querySelectorAll(".bad-path-echo")
+    .forEach((el) => (el.textContent = path));
+</script>

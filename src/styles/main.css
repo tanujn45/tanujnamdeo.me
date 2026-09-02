@@ -16,20 +16,28 @@
 html {
   height: fit-content;
   color: #232333;
+  /* Set explicitly: without it, light mode falls back to the browser's
+     default canvas, which is dark when the OS/browser prefers dark. */
+  background-color: #ffffff;
+  color-scheme: light;
   font-size: 15px;
   line-height: 1.6em;
 }
 
 body {
   display: block;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.dark-mode {
+[data-theme="dark"] {
   color: white !important;
   background-color: #000000;
+  color-scheme: dark;
 }
 
-.dark-mode button {
+[data-theme="dark"] button {
   color: white !important;
 }
 
@@ -317,7 +325,7 @@ pre.terminal {
   word-break: break-word;
 }
 
-.dark-mode pre.terminal {
+[data-theme="dark"] pre.terminal {
   background: rgba(255, 255, 255, 0.06);
   border-left-color: var(--darkMaincolor);
 }
@@ -327,7 +335,7 @@ pre.terminal .prompt {
   font-weight: 700;
 }
 
-.dark-mode pre.terminal .prompt {
+[data-theme="dark"] pre.terminal .prompt {
   color: var(--darkMaincolor);
 }
 
@@ -379,4 +387,50 @@ pre.terminal .prompt {
   .konami-cat figure {
     animation: none;
   }
+}
+
+/* ---- Layout helpers (replacing the two Bootstrap grid classes) ---- */
+.figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.5rem;
+}
+
+.figure-row > * {
+  flex: 1 1 260px;
+  max-width: 50%;
+}
+
+@media screen and (max-width: 600px) {
+  .figure-row > * {
+    max-width: 100%;
+  }
+}
+
+.resume-link {
+  margin-left: 0.5rem;
+}
+
+/* ---- Theme toggle icons: sun in dark mode, moon in light ---- */
+.icon-sun {
+  display: none;
+}
+
+.icon-moon {
+  display: inline-block;
+}
+
+[data-theme="dark"] .icon-sun {
+  display: inline-block;
+}
+
+[data-theme="dark"] .icon-moon {
+  display: none;
+}
+
+/* The overlay is display:flex, so the hidden attribute needs to win. */
+.konami-cat[hidden] {
+  display: none;
 }

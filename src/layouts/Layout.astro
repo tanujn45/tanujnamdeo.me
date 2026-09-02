@@ -1,0 +1,344 @@
+---
+import "../styles/main.css";
+import XIcon from "../components/XIcon.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Tanuj Namdeo",
+  description = "Tanuj Namdeo — software engineer at Robinhood. Portfolio, work history and projects.",
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.ico" />
+
+    <!-- Link previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <!-- Set the theme before first paint so there's no flash of the wrong one. -->
+    <script is:inline>
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem("theme");
+        } catch (e) {}
+        if (stored !== "light") document.documentElement.dataset.theme = "dark";
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div class="theme-root">
+      <div class="container">
+        <div class="content">
+          <header>
+            <div class="main"><a href="/">Tanuj Namdeo</a></div>
+            <nav>
+              <a
+                href="https://github.com/tanujn45"
+                title="GitHub"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                  ></path>
+                </svg>
+              </a>
+              <a
+                href="https://linkedin.com/in/tanujn45"
+                title="LinkedIn"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+                  ></path>
+                  <rect x="2" y="9" width="4" height="12"></rect>
+                  <circle cx="4" cy="4" r="2"></circle>
+                </svg>
+              </a>
+              <a
+                href="https://x.com/tanujn45"
+                title="X"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <XIcon />
+              </a>
+              <span>|</span>
+              <button id="theme-toggle" type="button" aria-label="Toggle theme">
+                <svg
+                  class="icon-sun"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg
+                  class="icon-moon"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                  ></path>
+                </svg>
+              </button>
+            </nav>
+          </header>
+
+          <slot />
+
+          <footer>
+            <a
+              href="https://github.com/tanujn45"
+              title="GitHub"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                ></path>
+              </svg>
+            </a>
+            |
+            <a
+              href="https://linkedin.com/in/tanujn45"
+              title="LinkedIn"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+                ></path>
+                <rect x="2" y="9" width="4" height="12"></rect>
+                <circle cx="4" cy="4" r="2"></circle>
+              </svg>
+            </a>
+            |
+            <a
+              href="https://x.com/tanujn45"
+              title="X"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <XIcon />
+            </a>
+            |
+            <a href="mailto:tanujn45@gmail.com" title="Mail">
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                ></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            </a>
+            | ⚡️ {year} © Tanuj |
+            <a
+              class="resume-link"
+              href="https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Resume
+            </a>
+            |
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- Konami cat: up up down down left right left right B A -->
+    <div id="konami-cat" class="konami-cat" hidden>
+      <figure>
+        <img src="/img/cat.png" alt="A deeply unimpressed cat" />
+        <figcaption>you found the cat. click anywhere to dismiss.</figcaption>
+      </figure>
+    </div>
+
+    <script>
+      // ---- Theme toggle (persisted) ----
+      const root = document.documentElement;
+      const toggle = document.getElementById("theme-toggle");
+
+      toggle?.addEventListener("click", () => {
+        const isDark = root.dataset.theme === "dark";
+        if (isDark) {
+          delete root.dataset.theme;
+        } else {
+          root.dataset.theme = "dark";
+        }
+        try {
+          localStorage.setItem("theme", isDark ? "light" : "dark");
+        } catch (e) {
+          /* private browsing — the toggle still works for this page */
+        }
+      });
+
+      // ---- Konami code ----
+      const SEQUENCE = [
+        "ArrowUp",
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowLeft",
+        "ArrowRight",
+        "b",
+        "a",
+      ];
+      const overlay = document.getElementById("konami-cat");
+      let progress = 0;
+
+      const hideCat = () => overlay && (overlay.hidden = true);
+
+      window.addEventListener("keydown", (e) => {
+        const target = e.target as HTMLElement | null;
+        // Don't swallow typing in a field, if one is ever added.
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+
+        if (e.key === "Escape") return hideCat();
+
+        const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+        if (key === SEQUENCE[progress]) {
+          progress += 1;
+          if (progress === SEQUENCE.length) {
+            progress = 0;
+            if (overlay) overlay.hidden = false;
+          }
+        } else {
+          // A wrong key can still start a fresh attempt.
+          progress = key === SEQUENCE[0] ? 1 : 0;
+        }
+      });
+
+      overlay?.addEventListener("click", hideCat);
+
+      // ---- For anyone who opens devtools ----
+      const art = `
+ _____                  _
+|_   _|_ _ _ __  _   _ (_)
+  | |/ _\` | '_ \\| | | || |
+  | | (_| | | | | |_| || |
+  |_|\\__,_|_| |_|\\__,_|/ |
+                     |__/
+`;
+      const accent = "color:#50fa7b; font-family:monospace;";
+      const plain = "color:#888; font-family:monospace;";
+      console.log(`%c${art}`, accent);
+      console.log(
+        "%cSince you're already in here — the Konami code works on this page.",
+        plain
+      );
+      console.log("%c↑ ↑ ↓ ↓ ← → ← → B A", accent);
+      console.log(
+        "%cSource: https://github.com/tanujn45/tanujnamdeo.me",
+        plain
+      );
+    </script>
+  </body>
+</html>

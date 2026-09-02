@@ -1,0 +1,116 @@
+---
+import Layout from "../layouts/Layout.astro";
+import experienceData from "../data/experience.json";
+
+const { experience } = experienceData;
+---
+
+<Layout>
+  <main>
+    {/*
+    Weekly development breakdown — temporarily hidden.
+    The WakaTime share endpoints return no data, so this rendered all zeros.
+    Refresh the share URLs, then restore this section.
+
+    <section class="wakaTime">
+      <h1>Weekly development breakdown</h1>
+      ...
+    </section>
+    */}
+
+    <section class="intro">
+      <h1>Introduction</h1>
+      <p class="description">
+        🔬 Software Engineer: <a
+          href="https://robinhood.com"
+          target="_blank"
+          rel="noreferrer">Robinhood</a
+        >
+      </p>
+      {/*
+      <p class="description">
+        🔭 Personal projects I am working on: <a href="https://tanujn45.notion.site/2fb9b63c4ab74a8e980b10a041b09866?v=83bc88bdb1a84582ab3a4d8f8ff6c71d&pvs=4" target="_blank" rel="noreferrer">Project Management Board</a>
+      </p>
+      <p class="description">🌱 Currently learning: Blockchain</p>
+      */}
+      <p class="description">
+        📫 Reach out: <a href="mailto:tanujn45@gmail.com" title="Mail"
+          >tanujn45@gmail.com</a
+        >
+      </p>
+    </section>
+
+    <section>
+      <h1>Work Experience</h1>
+      {
+        experience.map((job) => (
+          <div class="read-more">
+            <h2>{job.company}</h2>
+            <time>{job.duration}</time>
+            <ul>
+              {job.responsibilities.map((role) => (
+                <li>{role}</li>
+              ))}
+            </ul>
+            {job.link && (
+              <a class="read-more-button" href={job.link}>
+                Read more ⟶
+              </a>
+            )}
+          </div>
+        ))
+      }
+    </section>
+
+    <section>
+      <h1>Education</h1>
+      <div>
+        <h2>The Pennsylvania State University</h2>
+        <time>Aug 2021 - Aug 2023, University Park</time>
+        <p>MS, Computer Science &amp; Engineering</p>
+      </div>
+      <div>
+        <h2>Symbiosis University of Applied Sciences</h2>
+        <time>Aug 2017 - May 2021, Indore</time>
+        <p>BTech, Computer Science &amp; Information Technology</p>
+        <ul>
+          <li>On the Dean's list every semester.</li>
+          <li>
+            Started CODEC, the campus coding club. It grew past 200 members and
+            we ran hackathons and workshops.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="projects">
+      <h1>Projects</h1>
+      <div class="read-more">
+        <h2>Global TweetScan</h2>
+        <p>
+          An analysis of Twitter's Information Operations dataset — tweets and
+          media from state-linked accounts across a number of countries. I
+          translated the non-English posts, then ran sentiment and topic
+          analysis over the set to look for patterns in how those accounts
+          pushed particular narratives.
+        </p>
+        <a
+          class="read-more-button"
+          href="https://github.com/tanujn45/Twitter-IO"
+          target="_blank"
+          rel="noreferrer">Github ⟶</a
+        >
+      </div>
+      <div class="read-more">
+        <h2>
+          Spatial-Temporal Deep Learning for Preference Prediction based on EEG
+          Brainware data
+        </h2>
+        <p>
+          A BiLSTM model that predicts what someone will prefer from their EEG
+          brainwave recordings. Trained and tested on the DEAP dataset.
+        </p>
+      </div>
+    </section>
+  </main>
+</Layout>
