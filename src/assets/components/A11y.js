@@ -8,40 +8,35 @@ const A11y = () => {
   return (
     <main>
       <h1>
-        <a>A11y lab @ Penn State</a>
+        <a>A11y Lab @ Penn State</a>
       </h1>
-      <time>Software Developer</time>
+      <time>Research Associate</time>
 
       <section>
         <h2>About A11y</h2>
         <p>
-          <a>A11y Lab</a>, a research unit within Penn State's College of
-          Information Science and Technology (IST), specializes in
-          Human-Computer Interaction (HCI) with a focus on Accessible Computing.
-          Its mission is to understand and enhance technology's interaction with
-          human abilities.
+          <a>A11y Lab</a> is a research group in Penn State's College of
+          Information Sciences and Technology. It works on human-computer
+          interaction, specifically accessible computing — making technology
+          work well for people across a wide range of abilities.
         </p>
         <p>
-          Through innovative methodologies such as human-AI teaming and
-          inclusive design, it develops intelligent technologies catering to
-          diverse needs. The lab pioneers solutions fostering inclusivity and
-          accessibility, creating opportunities for individuals from all
-          backgrounds.
+          The lab's approach combines human-AI teaming with inclusive design,
+          building tools that fit the people using them rather than the other
+          way around.
         </p>
       </section>
 
       <section>
-        <h2>Job Description</h2>
+        <h2>What I worked on</h2>
         <p>
-          Developed Android application utilizing Movesense IMU sensor for
-          recording IMU data, initiating the project's foundation.
+          I built an Android app that records motion data from a Movesense IMU
+          sensor. This was the starting point for the rest of the project.
         </p>
         <p>
-          Spearheaded the implementation of a Bluetooth screen within the
-          application, enabling seamless connectivity by storing previously
-          connected devices and conducting real-time scans for new available
-          devices, enhancing user experience and facilitating quick device
-          pairing.
+          I added a Bluetooth screen that remembers previously paired sensors
+          and scans for new ones, so getting connected takes a couple of taps
+          instead of a trip through system settings.
         </p>
         <div className="row justify-content-center mt-4">
           <div className="col-6">
@@ -62,21 +57,20 @@ const A11y = () => {
           </div>
         </div>
         <p>
-          Conducted data collection from a special needs participant, refining
-          data acquisition techniques.
+          I ran a data collection session with a participant with special
+          needs, and adjusted how we recorded based on what came out of it.
         </p>
         <p>
-          Evaluated and compared various machine learning algorithms to enhance
-          gesture detection accuracy, ensuring optimal performance.
+          I compared several machine learning algorithms to see which one
+          detected gestures most accurately.
         </p>
         <p>
-          Recognized the necessity of video feed for precise data preparation,
-          integrated camera recording functionality into the application.
+          It became clear we needed video alongside the sensor data to label it
+          properly, so I added camera recording to the app.
         </p>
         <p>
-          Initiated development of Python-based annotation and visualization
-          tool to streamline data preparation, reducing processing time by a
-          minimum of 80% in initial testing.
+          I started a Python tool for labelling and viewing the recorded data.
+          In early testing it cut processing time by at least 80%.
         </p>
 
         <figure>
@@ -87,21 +81,19 @@ const A11y = () => {
         </figure>
       </section>
       <section>
-        <h2>Future work</h2>
+        <h2>Where it was headed</h2>
         <p>
-          Designed and implemented annotation and visualization tools, currently
-          undergoing rigorous testing phase to ensure reliability and
-          functionality.
+          The labelling and visualization tools were built and in testing when
+          I left.
         </p>
         <p>
-          Planned future data collection efforts with a diverse group of
-          participants, enhancing dataset diversity and model robustness.
+          The next step was collecting data from a wider group of participants,
+          so the dataset covered more kinds of people.
         </p>
         <p>
-          Scheduled implementation of annotation and visualization tools into
-          the Android application, enabling users to record and process their
-          own data, facilitating personalized machine learning model adjustments
-          for improved accuracy.
+          After that, the plan was to fold the labelling tools into the Android
+          app itself, so people could record and process their own data and tune
+          the model to themselves.
         </p>
       </section>
       <ul>

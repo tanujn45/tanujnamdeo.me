@@ -67,22 +67,19 @@ const PennState = () => {
         </section>
 
         <section>
-          <h2>Description of my work</h2>
+          <h2>What I did</h2>
           <ul>
             <li>
-              Mentored and guided over 320 students, with student evaluations
-              indicating a 97% satisfaction rate and improvement in
-              troubleshooting proficiency.
+              Taught and helped over 320 students. Evaluations came back at 97%
+              satisfaction.
             </li>
             <li>
-              Assisted in grading over 1,000 assignments and exams, with my
-              structured feedback approach adopted across the course for its
-              effectiveness in student improvement.
+              Graded more than 1,000 assignments and exams. The feedback format
+              I used got picked up across the course.
             </li>
           </ul>
           <p>
-            The assistantships offered comprehensive coverage of full tuition in
-            addition to a monthly stipend.
+            The assistantships covered full tuition plus a monthly stipend.
           </p>
         </section>
 

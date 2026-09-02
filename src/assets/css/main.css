@@ -302,3 +302,81 @@ canvas {
   height: auto;
    border: 5px solid white; */
 }
+
+/* ---- 404 terminal block ---- */
+pre.terminal {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  padding: 16px 18px;
+  margin: 20px 0;
+  overflow-x: auto;
+  border-left: 3px solid var(--maincolor);
+  background: rgba(0, 0, 0, 0.05);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark-mode pre.terminal {
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: var(--darkMaincolor);
+}
+
+pre.terminal .prompt {
+  color: var(--maincolor);
+  font-weight: 700;
+}
+
+.dark-mode pre.terminal .prompt {
+  color: var(--darkMaincolor);
+}
+
+/* ---- Konami cat ---- */
+.konami-cat {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  cursor: pointer;
+  animation: konami-fade 180ms ease-out both;
+}
+
+.konami-cat figure {
+  margin: 0;
+  text-align: center;
+  animation: konami-pop 320ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.konami-cat img {
+  max-width: min(70vw, 420px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.konami-cat figcaption {
+  margin-top: 14px;
+  color: #fff;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.85rem;
+}
+
+@keyframes konami-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes konami-pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .konami-cat,
+  .konami-cat figure {
+    animation: none;
+  }
+}

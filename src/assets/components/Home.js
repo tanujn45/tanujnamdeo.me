@@ -62,7 +62,10 @@ function Home() {
 
   return (
     <main>
-      {/* Weekly development breakdown */}
+      {/* Weekly development breakdown — temporarily hidden.
+          The WakaTime share endpoints return no data, so this rendered
+          all zeros. Refresh the share URLs above, then uncomment. */}
+      {/*
       <section className="wakaTime">
         <h1>Weekly development breakdown</h1>
         <div>
@@ -80,17 +83,18 @@ function Home() {
           </div>
         </div>
       </section>
+      */}
 
       {/* Introduction */}
       <section className="intro">
         <h1>Introduction</h1>
         <p className="description">
-          🔬 Software Developer:{" "}
-          <a href="https://a11y.ist.psu.edu/" target="_blank">
-            A11y Labs
-          </a>{" "}
-          @ Penn State
+          🔬 Software Engineer:{" "}
+          <a href="https://robinhood.com" target="_blank" rel="noreferrer">
+            Robinhood
+          </a>
         </p>
+      {/*
         <p className="description">
           🔭 Personal projects I am working on:{" "}
           <a
@@ -101,8 +105,9 @@ function Home() {
           </a>
         </p>
         <p className="description">🌱 Currently learning: Blockchain</p>
+      */}
         <p className="description">
-          📫 Reach out:
+          📫 Reach out:{" "}
           <a href="mailto:tanujn45@gmail.com" title="Mail">
             tanujn45@gmail.com
           </a>
@@ -123,9 +128,11 @@ function Home() {
                 <li key={index}>{role}</li>
               ))}
             </ul>
-            <Link className="read-more-button" to={job.link}>
-              Read more ⟶
-            </Link>
+            {job.link && (
+              <Link className="read-more-button" to={job.link}>
+                Read more ⟶
+              </Link>
+            )}
           </div>
         ))}
       </section>
@@ -148,14 +155,11 @@ function Home() {
           <p>BTech, Computer Science & Information Technology</p>
           <ul>
             <li>
-              Made the Dean's list for all semesters, demonstrating exceptional
-              academic achievement and dedication to excellence.
+              On the Dean's list every semester.
             </li>
             <li>
-              Founded and led a thriving coding club, expanding its membership
-              to over 200 individuals and orchestrating engaging events
-              including hackathons and workshops, enhancing practical skill
-              development.
+              Started CODEC, the campus coding club. It grew past 200 members
+              and we ran hackathons and workshops.
             </li>
           </ul>
         </div>
@@ -166,19 +170,14 @@ function Home() {
         <h1>Projects</h1>
         <div className="read-more">
           <h2>
-            <a>Global TweetScan: Unveiling Agendas in Digital Shadows</a>
+            <a>Global TweetScan</a>
           </h2>
           <p>
-            In this project, I spearheaded an advanced analysis of the Twitter
-            Information Operations (IO) dataset, employing cutting-edge
-            translation and natural language processing techniques to decode and
-            scrutinize tweets and associated media from various countries. The
-            focus was on applying sentiment and topic analysis to uncover
-            potential agendas, without delving into specific results. This
-            approach involved a meticulous examination of digital content to
-            understand the dynamics of information dissemination and the
-            strategic use of social media by government and non-government
-            entities for potential agenda propagation.
+            An analysis of Twitter's Information Operations dataset — tweets
+            and media from state-linked accounts across a number of countries.
+            I translated the non-English posts, then ran sentiment and topic
+            analysis over the set to look for patterns in how those accounts
+            pushed particular narratives.
           </p>
           <a
             className="read-more-button"
@@ -190,52 +189,14 @@ function Home() {
         </div>
         <div className="read-more">
           <h2>
-            <a>CosmoNFT</a>
-          </h2>
-          <p>
-            At the helm of CosmoPunk Studio, I engineered a groundbreaking
-            platform democratizing NFT creation. With a single click, users
-            generate their distinctive NFTs using the ERC-721 standard, directly
-            on the blockchain. Upon minting, they receive a unique link
-            redirecting them to OpenSea, where they can proudly view and
-            showcase their newly minted digital assets. This seamless
-            integration enriches the user experience, facilitating exploration
-            and engagement within the vibrant NFT ecosystem.
-          </p>
-          <a className="read-more-button" href="https://cosmopunk.netlify.app/">
-            Try it ⟶
-          </a>
-        </div>
-        <div className="read-more">
-          <h2>
-            <a>CosmoChat</a>
-          </h2>
-          <p>
-            CosmoChat is a dynamic project I spearheaded, leveraging blockchain
-            technology to transform communication. With a focus on simplicity
-            and security, users connect their crypto wallets to exchange
-            messages directly on the blockchain. By prioritizing privacy and
-            efficiency, CosmoChat pioneers a new era of decentralized messaging,
-            setting a standard for secure digital interactions.
-          </p>
-          <a className="read-more-button" href="https://cosmochat.netlify.app/">
-            Try it ⟶
-          </a>
-        </div>
-        <div className="read-more">
-          <h2>
             <a>
-              Spatial-Temporal Deep Leaning for Preference Prediction based on
+              Spatial-Temporal Deep Learning for Preference Prediction based on
               EEG Brainware data
             </a>
           </h2>
           <p>
-            Leveraged cutting-edge deep learning methodologies, specifically
-            employing a BiLSTM model, to accurately forecast user preferences
-            via EEG brainwave data analysis. Executed comprehensive model
-            training and rigorous testing procedures utilizing the DEAP dataset,
-            showcasing adeptness in both innovation and practical application
-            within the field.
+            A BiLSTM model that predicts what someone will prefer from their
+            EEG brainwave recordings. Trained and tested on the DEAP dataset.
           </p>
         </div>
       </section>

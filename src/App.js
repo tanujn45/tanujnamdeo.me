@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useState } from "react";
-import { GitHub, Linkedin, Twitter, Sun, Moon, Mail } from "react-feather";
+import { GitHub, Linkedin, Sun, Moon, Mail } from "react-feather";
 import YouTube from "react-youtube";
 import favicon from "./assets/img/favicon.ico";
 
@@ -14,13 +14,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./assets/css/main.css";
 
 import Home from "./assets/components/Home";
-import Emotorad from "./assets/components/Emotorad";
 import A11y from "./assets/components/A11y";
-import Muniversiti from "./assets/components/Muniversiti";
 import PennState from "./assets/components/PennState";
-import Harbor365 from "./assets/components/Harbor365";
-import Explodely from "./assets/components/Explodely";
 import ScrollToTop from "./assets/components/ScrollToTop.js";
+import NotFound from "./assets/components/NotFound";
+import KonamiCat from "./assets/components/KonamiCat";
+import XIcon from "./assets/components/XIcon";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
@@ -46,6 +45,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      <KonamiCat />
       <div className={`${darkMode ? "dark-mode" : ""}`}>
         <div className="container">
           <div className="content">
@@ -61,8 +61,13 @@ function App() {
                 <a href="https://linkedin.com/in/tanujn45" target="_blank">
                   <Linkedin />
                 </a>
-                <a href="https://twitter.com/tanujn45" target="_blank">
-                  <Twitter />
+                <a
+                  href="https://x.com/tanujn45"
+                  title="X"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <XIcon />
                 </a>
                 <span>|</span>
                 <button onClick={toggleDarkMode} href="/">
@@ -74,12 +79,9 @@ function App() {
             {/* Routes */}
             <Routes>
               <Route path="/" exact element={<Home />} />
-              <Route path="/emotorad" element={<Emotorad />} />
               <Route path="/a11y" element={<A11y />} />
-              <Route path="/muniversiti" element={<Muniversiti />} />
               <Route path="/psu" element={<PennState />} />
-              <Route path="/harbor365" element={<Harbor365 />} />
-              <Route path="/explodely" element={<Explodely />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
 
             {/* Footer */}
@@ -101,17 +103,18 @@ function App() {
               </a>
               |
               <a
-                href="https://twitter.com/tanujn45"
-                title="Twitter"
+                href="https://x.com/tanujn45"
+                title="X"
                 target="_blank"
+                rel="noreferrer"
               >
-                <Twitter />
+                <XIcon />
               </a>
               |
               <a href="mailto:tanujn45@gmail.com" title="Mail" target="_blank">
                 <Mail />
               </a>
-              | ⚡️ 2024 © Tanuj |
+              | ⚡️ 2026 © Tanuj |
               <a
                 className="ms-2"
                 href="https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing"

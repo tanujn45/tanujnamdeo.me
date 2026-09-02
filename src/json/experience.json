@@ -1,14 +1,23 @@
 {
   "experience": [
     {
-      "company": "A11y Lab",
-      "duration": "Oct 2023 – Present",
+      "company": "Robinhood",
+      "duration": "Oct 2025 – Present",
+      "position": "Software Engineer",
+      "location": "Sunnyvale, CA",
+      "responsibilities": [
+        "Working on the mobile app."
+      ]
+    },
+    {
+      "company": "Research Associate @ A11y labs",
+      "duration": "Oct 2023 – Mar 2025",
       "position": "Research Associate",
       "location": "State College, PA",
       "link": "/a11y",
       "responsibilities": [
-        "Revolutionizing tech accessibility with cutting-edge tools and user-centric strategies.",
-        "Leading A11y efforts, creating tech solutions that empower users of all abilities."
+        "Built an Android app that records motion data from a wearable IMU sensor.",
+        "Wrote a Python tool for labelling and viewing that data, which cut our processing time by about 80%."
       ]
     },
     {
@@ -18,41 +27,8 @@
       "location": "State College, PA",
       "link": "/psu",
       "responsibilities": [
-        "Served as a Teaching Assistant for CMPSC 201, CMPSC 101, and AERSP 424.",
-        "Demonstrated proficiency in Python, C++, Java, and Matlab during TA roles."
-      ]
-    },
-    {
-      "company": "Emotorad",
-      "duration": "Mar 2021 – Jul 2021",
-      "position": "Software Developer",
-      "location": "Remote",
-      "link": "/emotorad",
-      "responsibilities": [
-        "Led creation of digital sales platform, utilizing modern tech stack for optimal performance.",
-        "Designed captivating user interface, amplifying Emotorad's online market presence and revenue."
-      ]
-    },
-    {
-      "company": "Muniversiti",
-      "duration": "Aug 2018 – Aug 2020",
-      "position": "Software Development Engineer",
-      "location": "Indore, India",
-      "link": "/muniversiti",
-      "responsibilities": [
-        "Orchestrated digital platform development, optimizing web and mobile experiences with cutting-edge technologies for Muniversiti's educational initiatives.",
-        "Enhanced Muniversiti's outreach and engagement through strategic website launch and innovative mobile app implementation."
-      ]
-    },
-    {
-      "company": "Explodely",
-      "duration": "Mar 2021 – Jul 2021",
-      "position": "Software Developer",
-      "location": "Remote",
-      "link": "/explodely",
-      "responsibilities": [
-        "Developed intuitive front-end features for the affiliate portal, enhancing user engagement and tool accessibility.",
-        " Engineered responsive interfaces for the seller portal, optimizing transaction flows and user experience. Fixed bugs and performance issues to ensure that the platform was stable and reliable for users."
+        "TA for three courses: intro programming, C++ for engineers, and advanced programming.",
+        "Taught and graded for 320+ students, working in Python, C++, Java, and MATLAB."
       ]
     }
   ]
