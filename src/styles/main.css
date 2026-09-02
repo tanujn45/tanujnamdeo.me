@@ -461,3 +461,20 @@ header nav a {
   margin-left: 0;
   margin-right: 0;
 }
+
+/* An inline <svg> sits in a line box, so the header's 2.5em line-height made
+   the anchor 44px tall for a 15px icon and pushed its underline far below.
+   Making the anchor a flex container removes the line box: the icon's own
+   height is the anchor's height, so the underline sits right under it. */
+.social-row a,
+.footer-row a {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  padding-bottom: 3px;
+}
+
+.social-row .sep,
+.footer-row .sep {
+  line-height: 1;
+}
