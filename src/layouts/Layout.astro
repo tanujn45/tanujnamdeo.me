@@ -1,6 +1,11 @@
 ---
 import "../styles/main.css";
-import XIcon from "../components/XIcon.astro";
+import GitHub from "../components/icons/GitHub.astro";
+import LinkedIn from "../components/icons/LinkedIn.astro";
+import Mail from "../components/icons/Mail.astro";
+import X from "../components/icons/X.astro";
+import Sun from "../components/icons/Sun.astro";
+import Moon from "../components/icons/Moon.astro";
 
 interface Props {
   title?: string;
@@ -14,6 +19,9 @@ const {
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const year = new Date().getFullYear();
+
+const RESUME_URL =
+  "https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing";
 ---
 
 <!doctype html>
@@ -49,197 +57,74 @@ const year = new Date().getFullYear();
   </head>
 
   <body>
-    <div class="theme-root">
-      <div class="container">
-        <div class="content">
-          <header>
-            <div class="main"><a href="/">Tanuj Namdeo</a></div>
-            <nav>
-              <a
-                href="https://github.com/tanujn45"
-                title="GitHub"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-                  ></path>
-                </svg>
-              </a>
-              <a
-                href="https://linkedin.com/in/tanujn45"
-                title="LinkedIn"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
-                  ></path>
-                  <rect x="2" y="9" width="4" height="12"></rect>
-                  <circle cx="4" cy="4" r="2"></circle>
-                </svg>
-              </a>
-              <a
-                href="https://x.com/tanujn45"
-                title="X"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <XIcon />
-              </a>
-              <span>|</span>
-              <button id="theme-toggle" type="button" aria-label="Toggle theme">
-                <svg
-                  class="icon-sun"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="5"></circle>
-                  <line x1="12" y1="1" x2="12" y2="3"></line>
-                  <line x1="12" y1="21" x2="12" y2="23"></line>
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                  <line x1="1" y1="12" x2="3" y2="12"></line>
-                  <line x1="21" y1="12" x2="23" y2="12"></line>
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                </svg>
-                <svg
-                  class="icon-moon"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                  ></path>
-                </svg>
-              </button>
-            </nav>
-          </header>
-
-          <slot />
-
-          <footer>
+    <div class="container">
+      <div class="content">
+        <header>
+          <div class="main"><a href="/">Tanuj Namdeo</a></div>
+          <nav class="social-row">
             <a
               href="https://github.com/tanujn45"
               title="GitHub"
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer"><GitHub /></a
             >
-              <svg
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path
-                  d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-                ></path>
-              </svg>
-            </a>
-            |
             <a
               href="https://linkedin.com/in/tanujn45"
               title="LinkedIn"
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer"><LinkedIn /></a
             >
-              <svg
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
-                ></path>
-                <rect x="2" y="9" width="4" height="12"></rect>
-                <circle cx="4" cy="4" r="2"></circle>
-              </svg>
-            </a>
-            |
             <a
               href="https://x.com/tanujn45"
               title="X"
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer"><X /></a
             >
-              <XIcon />
-            </a>
-            |
-            <a href="mailto:tanujn45@gmail.com" title="Mail">
-              <svg
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path
-                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                ></path>
-                <polyline points="22,6 12,13 2,6"></polyline>
-              </svg>
-            </a>
-            | ⚡️ {year} © Tanuj |
+            <span class="sep">|</span>
+            <button id="theme-toggle" type="button" aria-label="Toggle theme">
+              <Sun />
+              <Moon />
+            </button>
+          </nav>
+        </header>
+
+        <slot />
+
+        <footer>
+          <!--
+            A flex row: whitespace-only text between flex children generates no
+            box, so the gaps come from `gap` alone and markup indentation can't
+            leak stray spaces the way it does in normal inline flow.
+          -->
+          <div class="footer-row">
             <a
-              class="resume-link"
-              href="https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing"
+              href="https://github.com/tanujn45"
+              title="GitHub"
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer"><GitHub /></a
             >
-              Resume
-            </a>
-            |
-          </footer>
-        </div>
+            <span class="sep">|</span>
+            <a
+              href="https://linkedin.com/in/tanujn45"
+              title="LinkedIn"
+              target="_blank"
+              rel="noreferrer"><LinkedIn /></a
+            >
+            <span class="sep">|</span>
+            <a
+              href="https://x.com/tanujn45"
+              title="X"
+              target="_blank"
+              rel="noreferrer"><X /></a
+            >
+            <span class="sep">|</span>
+            <a href="mailto:tanujn45@gmail.com" title="Mail"><Mail /></a>
+            <span class="sep">|</span>
+            <span class="footer-copy">⚡️ {year} © Tanuj</span>
+            <span class="sep">|</span>
+            <a href={RESUME_URL} target="_blank" rel="noreferrer">Resume</a>
+          </div>
+        </footer>
       </div>
     </div>
 
@@ -335,10 +220,7 @@ const year = new Date().getFullYear();
         plain
       );
       console.log("%c↑ ↑ ↓ ↓ ← → ← → B A", accent);
-      console.log(
-        "%cSource: https://github.com/tanujn45/tanujnamdeo.me",
-        plain
-      );
+      console.log("%cSource: https://github.com/tanujn45/tanujnamdeo.me", plain);
     </script>
   </body>
 </html>

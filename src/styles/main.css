@@ -409,10 +409,6 @@ pre.terminal .prompt {
   }
 }
 
-.resume-link {
-  margin-left: 0.5rem;
-}
-
 /* ---- Theme toggle icons: sun in dark mode, moon in light ---- */
 .icon-sun {
   display: none;
@@ -433,4 +429,35 @@ pre.terminal .prompt {
 /* The overlay is display:flex, so the hidden attribute needs to win. */
 .konami-cat[hidden] {
   display: none;
+}
+
+/* ---- Header and footer rows ----
+   Flex containers drop whitespace-only text nodes between children, so the
+   spacing comes from `gap` and never from markup indentation. */
+.social-row,
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.footer-row {
+  justify-content: center;
+  row-gap: 0.35rem;
+}
+
+.sep {
+  color: grey;
+  user-select: none;
+}
+
+.footer-copy {
+  white-space: nowrap;
+}
+
+/* The separators already do the spacing; drop the header's old nudge. */
+header nav a {
+  margin-left: 0;
+  margin-right: 0;
 }
