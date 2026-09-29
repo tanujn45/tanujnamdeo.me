@@ -1116,8 +1116,8 @@ header nav a {
 
 /* A PR gets the cat. */
 .pr-cat {
-  height: 1.4em;
+  height: 1em;
   width: auto;
-  margin-left: 6px;
-  vertical-align: -0.35em;
+  margin-left: 5px;
+  vertical-align: -0.18em;
 }
