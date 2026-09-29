@@ -478,3 +478,113 @@ header nav a {
 .footer-row .sep {
   line-height: 1;
 }
+
+/* ---- Workout log (/lift) ---- */
+.lift .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 460px;
+  margin-top: 12px;
+}
+
+.lift .row-2,
+.lift .row-3 {
+  display: flex;
+  gap: 8px;
+  max-width: 460px;
+  margin-top: 12px;
+}
+
+.lift .row-2 > *:first-child {
+  flex: 1;
+}
+
+.lift .row-3 > * {
+  flex: 1;
+}
+
+.lift .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lift .field > span {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.8rem;
+  color: grey;
+}
+
+.lift input,
+.lift select {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 2px;
+}
+
+.lift input:focus,
+.lift select:focus {
+  outline: 2px solid var(--maincolor);
+  outline-offset: 1px;
+}
+
+.lift .btn {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.lift .btn:hover {
+  border-color: var(--maincolor);
+}
+
+.lift .btn-primary {
+  border-color: var(--maincolor);
+  border-width: 2px;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .lift .btn-primary {
+  border-color: var(--darkMaincolor);
+}
+
+.lift .btn-quiet {
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+.lift .lift-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.lift h3 {
+  margin-bottom: 0;
+}
+
+.lift canvas {
+  /* The global rule pins canvas to the viewport centre for the old
+     ScrollMagic experiment; this page needs it to sit in the flow. */
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  max-width: 100%;
+  margin-top: 1rem;
+}

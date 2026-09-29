@@ -10,11 +10,13 @@ import Moon from "../components/icons/Moon.astro";
 interface Props {
   title?: string;
   description?: string;
+  noindex?: boolean;
 }
 
 const {
   title = "Tanuj Namdeo",
   description = "Tanuj Namdeo — software engineer at Robinhood. Portfolio, work history and projects.",
+  noindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -31,6 +33,7 @@ const year = new Date().getFullYear();
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.ico" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Link previews -->
     <meta property="og:type" content="website" />

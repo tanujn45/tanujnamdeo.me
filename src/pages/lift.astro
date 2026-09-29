@@ -1,0 +1,422 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Lift — Tanuj Namdeo" description="Private workout log." noindex>
+  <main class="lift">
+    <h1>Lift</h1>
+
+    <!-- Shown when env vars are missing, so the page explains itself -->
+    <section id="unconfigured" hidden>
+      <pre class="terminal"><span class="prompt">$</span> lift
+error: Supabase credentials not set
+set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
+    </section>
+
+    <!-- Sign in -->
+    <section id="auth" hidden>
+      <h2>Sign in</h2>
+      <p class="description">
+        A one-time link gets emailed to you. No password.
+      </p>
+      <form id="auth-form" class="stack">
+        <input
+          type="email"
+          id="email"
+          placeholder="you@example.com"
+          required
+          autocomplete="email"
+        />
+        <button type="submit" class="btn">Send link</button>
+      </form>
+      <p id="auth-msg" class="description" role="status"></p>
+    </section>
+
+    <!-- Logged in -->
+    <section id="app" hidden>
+      <div class="lift-bar">
+        <span id="who" class="description"></span>
+        <button id="signout" class="btn btn-quiet" type="button">
+          Sign out
+        </button>
+      </div>
+
+      <h2>Log a set</h2>
+      <form id="set-form" class="stack">
+        <div class="row-2">
+          <select id="exercise" required>
+            <option value="">Select exercise…</option>
+          </select>
+          <button id="new-exercise" class="btn btn-quiet" type="button">
+            + New
+          </button>
+        </div>
+
+        <div class="row-3">
+          <label class="field">
+            <span>Weight</span>
+            <input
+              type="number"
+              id="weight"
+              inputmode="decimal"
+              step="0.5"
+              min="0"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>Unit</span>
+            <select id="unit">
+              <option value="lbs" selected>lbs</option>
+              <option value="kg">kg</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Reps</span>
+            <input
+              type="number"
+              id="reps"
+              inputmode="numeric"
+              step="1"
+              min="1"
+              required
+            />
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Log set</button>
+      </form>
+      <p id="set-msg" class="description" role="status"></p>
+
+      <h2>Today</h2>
+      <div id="today"><p class="description">Nothing logged yet.</p></div>
+
+      <h2>Progress</h2>
+      <div class="row-2">
+        <select id="chart-exercise"><option value="">Select exercise…</option
+          ></select>
+        <select id="chart-metric">
+          <option value="top">Heaviest set</option>
+          <option value="e1rm">Estimated 1RM</option>
+          <option value="volume">Total volume</option>
+        </select>
+      </div>
+      <canvas id="chart" height="200"></canvas>
+      <p id="chart-msg" class="description"></p>
+
+      <h2>History</h2>
+      <div id="history"><p class="description">No sets yet.</p></div>
+    </section>
+  </main>
+</Layout>
+
+<script>
+  import { supabase, isConfigured } from "../lib/supabase";
+  import Chart from "chart.js/auto";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const show = (id: string, on = true) => ((<any>$(id)).hidden = !on);
+
+  if (!isConfigured) {
+    show("unconfigured");
+  } else {
+    main();
+  }
+
+  type Exercise = { id: string; name: string };
+  type SetRow = {
+    id: string;
+    exercise_id: string;
+    weight: number;
+    unit: "lbs" | "kg";
+    reps: number;
+    performed_at: string;
+  };
+
+  let exercises: Exercise[] = [];
+  let sets: SetRow[] = [];
+  let chart: Chart | null = null;
+  let userId: string | null = null;
+
+  // Epley, the usual estimate. Only meaningful under ~12 reps.
+  const e1rm = (w: number, r: number) => w * (1 + r / 30);
+
+  const nameOf = (id: string) =>
+    exercises.find((e) => e.id === id)?.name ?? "—";
+
+  const dayKey = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+
+  async function main() {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      await onSignedIn(data.session.user.id, data.session.user.email ?? "");
+    } else {
+      show("auth");
+    }
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) onSignedIn(session.user.id, session.user.email ?? "");
+    });
+
+    // ---- auth ----
+    $("auth-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = (<HTMLInputElement>$("email")).value.trim();
+      $("auth-msg").textContent = "Sending…";
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.href },
+      });
+      $("auth-msg").textContent = error
+        ? `Error: ${error.message}`
+        : "Check your email for the link.";
+    });
+
+    $("signout").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.reload();
+    });
+
+    // ---- new exercise ----
+    $("new-exercise").addEventListener("click", async () => {
+      const name = prompt("Exercise name")?.trim();
+      if (!name) return;
+      const { data, error } = await supabase
+        .from("exercises")
+        .insert({ name, user_id: userId })
+        .select()
+        .single();
+      if (error) {
+        // The unique index rejects case-variant duplicates.
+        $("set-msg").textContent = error.message.includes("duplicate")
+          ? `"${name}" already exists.`
+          : `Error: ${error.message}`;
+        return;
+      }
+      exercises.push(data as Exercise);
+      exercises.sort((a, b) => a.name.localeCompare(b.name));
+      renderExercises();
+      (<HTMLSelectElement>$("exercise")).value = (data as Exercise).id;
+    });
+
+    // ---- log a set ----
+    $("set-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const exercise_id = (<HTMLSelectElement>$("exercise")).value;
+      const weight = parseFloat((<HTMLInputElement>$("weight")).value);
+      const reps = parseInt((<HTMLInputElement>$("reps")).value, 10);
+      const unit = <"lbs" | "kg">(<HTMLSelectElement>$("unit")).value;
+      if (!exercise_id) {
+        $("set-msg").textContent = "Pick an exercise first.";
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("sets")
+        .insert({ exercise_id, weight, reps, unit, user_id: userId })
+        .select()
+        .single();
+
+      if (error) {
+        $("set-msg").textContent = `Error: ${error.message}`;
+        return;
+      }
+
+      sets.unshift(data as SetRow);
+      $("set-msg").textContent = `Logged ${weight}${unit} × ${reps}.`;
+      // Keep weight and unit for the next set; clear reps only.
+      (<HTMLInputElement>$("reps")).value = "";
+      localStorage.setItem("lift:unit", unit);
+      localStorage.setItem("lift:exercise", exercise_id);
+      renderToday();
+      renderHistory();
+      renderChart();
+    });
+
+    $("chart-exercise").addEventListener("change", renderChart);
+    $("chart-metric").addEventListener("change", renderChart);
+  }
+
+  async function onSignedIn(id: string, email: string) {
+    userId = id;
+    show("auth", false);
+    show("app");
+    $("who").textContent = email;
+
+    const [{ data: ex }, { data: st }] = await Promise.all([
+      supabase.from("exercises").select("id,name").order("name"),
+      supabase
+        .from("sets")
+        .select("id,exercise_id,weight,unit,reps,performed_at")
+        .order("performed_at", { ascending: false })
+        .limit(2000),
+    ]);
+
+    exercises = (ex ?? []) as Exercise[];
+    sets = (st ?? []) as SetRow[];
+
+    renderExercises();
+    renderToday();
+    renderHistory();
+    renderChart();
+
+    // Restore last-used choices so repeat sets are one field away.
+    const lastUnit = localStorage.getItem("lift:unit");
+    if (lastUnit) (<HTMLSelectElement>$("unit")).value = lastUnit;
+    const lastEx = localStorage.getItem("lift:exercise");
+    if (lastEx && exercises.some((e) => e.id === lastEx)) {
+      (<HTMLSelectElement>$("exercise")).value = lastEx;
+    }
+  }
+
+  function renderExercises() {
+    for (const id of ["exercise", "chart-exercise"]) {
+      const sel = <HTMLSelectElement>$(id);
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Select exercise…</option>';
+      for (const e of exercises) {
+        const o = document.createElement("option");
+        o.value = e.id;
+        o.textContent = e.name;
+        sel.appendChild(o);
+      }
+      if (current) sel.value = current;
+    }
+  }
+
+  function renderToday() {
+    const today = new Date().toISOString().slice(0, 10);
+    const mine = sets.filter((s) => dayKey(s.performed_at) === today);
+    if (!mine.length) {
+      $("today").innerHTML = '<p class="description">Nothing logged yet.</p>';
+      return;
+    }
+    const byExercise = new Map<string, SetRow[]>();
+    for (const s of mine) {
+      if (!byExercise.has(s.exercise_id)) byExercise.set(s.exercise_id, []);
+      byExercise.get(s.exercise_id)!.push(s);
+    }
+    let html = "";
+    for (const [exId, rows] of byExercise) {
+      const vol = rows.reduce((t, r) => t + r.weight * r.reps, 0);
+      html += `<div class="read-more"><h3>${nameOf(exId)}</h3><ul>`;
+      for (const r of [...rows].reverse()) {
+        html += `<li>${r.weight}${r.unit} × ${r.reps}</li>`;
+      }
+      html += `</ul><time>${rows.length} sets · ${Math.round(vol)} volume</time></div>`;
+    }
+    $("today").innerHTML = html;
+  }
+
+  function renderHistory() {
+    if (!sets.length) {
+      $("history").innerHTML = '<p class="description">No sets yet.</p>';
+      return;
+    }
+    const days = new Map<string, SetRow[]>();
+    for (const s of sets) {
+      const k = dayKey(s.performed_at);
+      if (!days.has(k)) days.set(k, []);
+      days.get(k)!.push(s);
+    }
+    let html = "";
+    let shown = 0;
+    for (const [day, rows] of days) {
+      if (shown++ >= 30) break;
+      const vol = rows.reduce((t, r) => t + r.weight * r.reps, 0);
+      html += `<div class="read-more"><h3>${day}</h3><time>${rows.length} sets · ${Math.round(vol)} volume</time><ul>`;
+      for (const r of [...rows].reverse()) {
+        html += `<li>${nameOf(r.exercise_id)} — ${r.weight}${r.unit} × ${r.reps}</li>`;
+      }
+      html += "</ul></div>";
+    }
+    $("history").innerHTML = html;
+  }
+
+  function renderChart() {
+    const exId = (<HTMLSelectElement>$("chart-exercise")).value;
+    const metric = (<HTMLSelectElement>$("chart-metric")).value;
+    const canvas = <HTMLCanvasElement>$("chart");
+
+    if (!exId) {
+      chart?.destroy();
+      chart = null;
+      $("chart-msg").textContent = "Pick an exercise to see progress.";
+      return;
+    }
+
+    const rows = sets.filter((s) => s.exercise_id === exId);
+    if (!rows.length) {
+      chart?.destroy();
+      chart = null;
+      $("chart-msg").textContent = "No sets logged for this exercise yet.";
+      return;
+    }
+
+    // Mixed units would make a single axis meaningless, so chart the unit
+    // the exercise was most often logged in and say so.
+    const counts = rows.reduce<Record<string, number>>((acc, r) => {
+      acc[r.unit] = (acc[r.unit] ?? 0) + 1;
+      return acc;
+    }, {});
+    const unit = (counts.kg ?? 0) > (counts.lbs ?? 0) ? "kg" : "lbs";
+    const inUnit = rows.filter((r) => r.unit === unit);
+    const dropped = rows.length - inUnit.length;
+
+    const byDay = new Map<string, SetRow[]>();
+    for (const r of inUnit) {
+      const k = dayKey(r.performed_at);
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k)!.push(r);
+    }
+
+    const labels = [...byDay.keys()].sort();
+    const values = labels.map((day) => {
+      const rs = byDay.get(day)!;
+      if (metric === "volume")
+        return Math.round(rs.reduce((t, r) => t + r.weight * r.reps, 0));
+      if (metric === "e1rm")
+        return Math.round(Math.max(...rs.map((r) => e1rm(r.weight, r.reps))));
+      return Math.max(...rs.map((r) => r.weight));
+    });
+
+    const label =
+      metric === "volume"
+        ? `Volume (${unit})`
+        : metric === "e1rm"
+          ? `Est. 1RM (${unit})`
+          : `Heaviest set (${unit})`;
+
+    chart?.destroy();
+    const ink = getComputedStyle(document.documentElement).color;
+    chart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label,
+            data: values,
+            borderColor: "#50fa7b",
+            backgroundColor: "rgba(80,250,123,0.15)",
+            tension: 0.25,
+            pointRadius: 3,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: ink } } },
+        scales: {
+          x: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+          y: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+        },
+      },
+    });
+
+    $("chart-msg").textContent = dropped
+      ? `${dropped} set(s) logged in the other unit are not shown.`
+      : "";
+  }
+</script>
