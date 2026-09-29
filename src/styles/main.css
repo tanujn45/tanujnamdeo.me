@@ -1668,3 +1668,20 @@ header nav a {
   font-size: 0.92rem;
   opacity: 0.92;
 }
+
+/* ---- who is lifting ---- */
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 2.5rem 0 1.5rem;
+}
+
+.lift .who-btn {
+  min-height: 92px;
+  font-size: 1.2rem;
+}
+
+#auth-who {
+  margin: 0;
+}

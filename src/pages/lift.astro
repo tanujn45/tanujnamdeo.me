@@ -13,11 +13,17 @@ error: Supabase credentials not set</pre>
     </section>
 
     <section id="auth" hidden>
-      <h1>Lift</h1>
-      <form id="auth-form" class="stack">
+      <div id="who-pick" class="who-grid">
+        <button class="btn who-btn" type="button" data-who="tanuj">Tanuj</button>
+        <button class="btn who-btn" type="button" data-who="lily">Lily</button>
+      </div>
+
+      <form id="auth-form" class="stack" hidden>
+        <p id="auth-who" class="muted"></p>
         <input type="password" id="password" placeholder="Password" required
           autocomplete="current-password" />
         <button type="submit" class="btn btn-primary">Unlock</button>
+        <button type="button" id="auth-back" class="linkish">Not you?</button>
       </form>
       <p id="auth-msg" class="description" role="status"></p>
     </section>
@@ -204,7 +210,16 @@ error: Supabase credentials not set</pre>
   import { supabase, isConfigured } from "../lib/supabase";
   import Chart from "chart.js/auto";
 
-  const ACCOUNT_EMAIL = "tanujn45@gmail.com";
+  // A name is friendlier than an email, and Supabase wants an email. The two
+  // accounts are entirely separate: row-level security means neither sees the
+  // other's workouts, exercises or history.
+  const ACCOUNTS: Record<string, string> = {
+    tanuj: "tanujn45@gmail.com",
+    lily: "lily@tanujnamdeo.me",
+  };
+  const ACCOUNT_EMAIL = ACCOUNTS.tanuj;   // used by the localhost auto-login
+  const LABELS: Record<string, string> = { tanuj: "Tanuj", lily: "Lily" };
+  let pickedWho: string | null = null;
   const DAYS = ["Legs", "Shoulders", "Chest", "Back", "Arms"];
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -327,12 +342,42 @@ error: Supabase credentials not set</pre>
   }
 
   function wire() {
+    const pickWho = (who: string) => {
+      pickedWho = who;
+      $("auth-who").textContent = `${LABELS[who] ?? who} — enter your password`;
+      show("who-pick", false);
+      show("auth-form");
+      $("auth-msg").textContent = "";
+      (<HTMLInputElement>$("password")).focus();
+    };
+
+    document.querySelectorAll<HTMLButtonElement>(".who-btn").forEach((b) =>
+      b.addEventListener("click", () => pickWho(b.dataset.who!)));
+
+    $("auth-back").addEventListener("click", () => {
+      pickedWho = null;
+      (<HTMLInputElement>$("password")).value = "";
+      $("auth-msg").textContent = "";
+      show("auth-form", false);
+      show("who-pick");
+    });
+
+    // Whoever used this device last is offered first.
+    try {
+      const last = localStorage.getItem("lift:who");
+      if (last && ACCOUNTS[last]) pickWho(last);
+    } catch (e) {}
+
     $("auth-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const f = <HTMLInputElement>$("password");
+      const who = pickedWho ?? "";
+      const email = ACCOUNTS[who];
+      if (!email) { show("auth-form", false); show("who-pick"); return; }
+
       $("auth-msg").textContent = "Checking…";
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: ACCOUNT_EMAIL, password: f.value,
+        email, password: f.value,
       });
       f.value = "";
       if (error) {
@@ -341,6 +386,7 @@ error: Supabase credentials not set</pre>
         f.focus();
         return;
       }
+      try { localStorage.setItem("lift:who", who); } catch (e) {}
       $("auth-msg").textContent = "";
       if (data.user) await afterSignIn(data.user.id);
     });
@@ -426,7 +472,14 @@ error: Supabase credentials not set</pre>
       if (!exDays.has(e.id)) exDays.set(e.id, new Set([e.day]));
     }
     days = ((dy.data ?? []) as typeof days);
-    if (!days.length) days = DAYS.map((n, i) => ({ id: n, name: n, position: i }));
+    if (!days.length) {
+      // First run for an account: give it real rows rather than placeholders,
+      // so renaming and deleting categories work straight away.
+      const { data: seeded } = await supabase.from("days")
+        .insert(DAYS.map((n, i) => ({ user_id: id, name: n, position: i })))
+        .select("id,name,position");
+      days = (seeded ?? DAYS.map((n, i) => ({ id: n, name: n, position: i }))) as typeof days;
+    }
     renderDayButtons();
     workouts = (wo.data ?? []) as Workout[];
     allSets = (st.data ?? []) as SetRow[];
