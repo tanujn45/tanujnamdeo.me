@@ -205,6 +205,8 @@ error: Supabase credentials not set</pre>
   let restEnd: number | null = null;      // epoch ms the rest ends
   let restHandle: number | null = null;
   let audio: AudioContext | null = null;
+  let scheduled: OscillatorNode[] = [];
+  let wakeLock: any = null;
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
 
@@ -322,13 +324,19 @@ error: Supabase credentials not set</pre>
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
     $("undo-btn").addEventListener("click", undoRemove);
+    // The pill always opens the menu. It used to cancel outright while
+    // running, which made Stop unreachable and let a mis-tap kill a rest.
     $("rest-pill").addEventListener("click", () => {
-      // Tapping while it runs stops it; otherwise open the presets.
-      if (restEnd) { stopRest(); return; }
       const m = $("rest-menu");
-      show("rest-menu", (<any>m).hidden);
+      const opening = (<any>m).hidden;
+      show("rest-menu", opening);
+      if (opening) $("rest-stop").textContent = restEnd ? "Stop" : "Close";
     });
-    $("rest-stop").addEventListener("click", stopRest);
+    $("rest-stop").addEventListener("click", () => {
+      // Nothing running: the button is just a way out of the menu.
+      if (!restEnd) { show("rest-menu", false); return; }
+      stopRest();
+    });
     document.querySelectorAll<HTMLButtonElement>(".rest-preset[data-s]").forEach((b) =>
       b.addEventListener("click", () => startRest(parseInt(b.dataset.s!, 10))));
     $("overall-metric").addEventListener("change", renderOverall);
@@ -951,6 +959,10 @@ error: Supabase credentials not set</pre>
   // throttling timers in the background cannot make it drift.
   function startRest(seconds: number) {
     unlockAudio();
+    // Queue the tones now, in the audio thread. Timer throttling on a locked
+    // phone cannot delay them the way it delays setInterval.
+    scheduleRing(seconds);
+    keepAwake();
     restEnd = Date.now() + seconds * 1000;
     try { localStorage.setItem("lift:restEnd", String(restEnd)); } catch (e) {}
     show("rest-menu", false);
@@ -961,6 +973,8 @@ error: Supabase credentials not set</pre>
   }
 
   function stopRest() {
+    cancelScheduled();
+    releaseWake();
     restEnd = null;
     try { localStorage.removeItem("lift:restEnd"); } catch (e) {}
     if (restHandle) clearInterval(restHandle);
@@ -980,6 +994,7 @@ error: Supabase credentials not set</pre>
       return;
     }
     // Done.
+    const late = Date.now() - restEnd;
     restEnd = null;
     try { localStorage.removeItem("lift:restEnd"); } catch (e) {}
     if (restHandle) clearInterval(restHandle);
@@ -988,7 +1003,10 @@ error: Supabase credentials not set</pre>
     pill.classList.remove("rest-running");
     pill.classList.add("rest-done");
     $("rest-label").textContent = "Go";
-    ring();
+    releaseWake();
+    // If the page was frozen past the end, the scheduled tones will have been
+    // missed, so sound them now instead.
+    if (late > 2000) ring();
     // Leave "Go" up for a while; it is the thing you glance at.
     setTimeout(() => {
       if (restEnd) return;
@@ -1003,6 +1021,46 @@ error: Supabase credentials not set</pre>
       if (!audio) audio = new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audio.state === "suspended") audio.resume();
     } catch (e) { audio = null; }
+  }
+
+  function scheduleRing(inSeconds: number) {
+    cancelScheduled();
+    if (!audio) return;
+    const base = audio.currentTime + inSeconds;
+    [0, 0.28, 0.56].forEach((at, i) => {
+      const osc = audio!.createOscillator();
+      const gain = audio!.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 660 + i * 220;
+      const t = base + at;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      osc.connect(gain).connect(audio!.destination);
+      osc.start(t);
+      osc.stop(t + 0.25);
+      scheduled.push(osc);
+    });
+  }
+
+  function cancelScheduled() {
+    scheduled.forEach((o) => { try { o.stop(); } catch (e) {} });
+    scheduled = [];
+  }
+
+  // Stops the phone sleeping mid-rest, which is what silences the alarm in
+  // the first place. Needs HTTPS and a gesture; both hold here.
+  async function keepAwake() {
+    try {
+      if (!("wakeLock" in navigator)) return;
+      wakeLock = await (navigator as any).wakeLock.request("screen");
+      wakeLock.addEventListener?.("release", () => { wakeLock = null; });
+    } catch (e) { wakeLock = null; }
+  }
+
+  function releaseWake() {
+    try { wakeLock?.release?.(); } catch (e) {}
+    wakeLock = null;
   }
 
   function ring() {
@@ -1024,6 +1082,12 @@ error: Supabase credentials not set</pre>
     });
   }
 
+  // Switching away drops the lock, so take it back if a rest is still going.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && restEnd && !wakeLock) keepAwake();
+    if (document.visibilityState === "visible") tickRest();
+  });
+
   // A reload mid-rest should pick the countdown back up.
   function restoreRest() {
     // Sign-in can settle after a rest has already been started by hand; do
@@ -1033,6 +1097,9 @@ error: Supabase credentials not set</pre>
       const saved = parseInt(localStorage.getItem("lift:restEnd") ?? "", 10);
       if (saved && saved > Date.now()) {
         restEnd = saved;
+        unlockAudio();
+        scheduleRing(Math.max(0, (saved - Date.now()) / 1000));
+        keepAwake();
         $("rest-pill").classList.add("rest-running");
         tickRest();
         restHandle = window.setInterval(tickRest, 250);
