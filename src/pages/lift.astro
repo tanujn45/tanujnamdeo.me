@@ -432,7 +432,6 @@ error: Supabase credentials not set</pre>
     allSets = (st.data ?? []) as SetRow[];
 
     show("tabs");
-    show("rest");
     restoreRest();
     const open = workouts.find((w) => !w.ended_at);
     if (open) await enterSession(open);
@@ -444,6 +443,11 @@ error: Supabase credentials not set</pre>
     for (const v of ["home", "session", "history", "progress", "summary", "manage"])
       show(`view-${v}`, false);
     show("picker", false);
+    // The rest timer only makes sense inside a workout, and elsewhere it
+    // floats over the calendar.
+    const inSession = view === "session" || (view === "home" && !!current);
+    show("rest", inSession || !!restEnd);
+    if (!inSession) show("rest-menu", false);
 
     document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
       b.classList.toggle("tab-on", b.dataset.view === view ||
@@ -1153,6 +1157,7 @@ error: Supabase credentials not set</pre>
     restEnd = Date.now() + seconds * 1000;
     try { localStorage.setItem("lift:restEnd", String(restEnd)); } catch (e) {}
     show("rest-menu", false);
+    show("rest");
     $("rest-pill").classList.add("rest-running");
     tickRest();
     if (restHandle) clearInterval(restHandle);
@@ -1861,7 +1866,7 @@ error: Supabase credentials not set</pre>
       const n = counts.get(key) ?? 0;
       const future = date > today;
       const isToday = keyOf(today) === key;
-      const mark = future ? " " : n === 0 ? "░" : n >= 6 ? "█" : "▓";
+      const mark = future || n === 0 ? "" : n >= 6 ? "█" : "▓";
       if (n > 0) { trained++; sets += n; }
 
       const onDay = (workoutsOn.get(key) ?? []).filter(

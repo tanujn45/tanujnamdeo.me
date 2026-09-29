@@ -1626,3 +1626,37 @@ header nav a {
   border: 1px solid var(--maincolor);
   border-radius: 6px;
 }
+
+/* ---- app chrome corrections ---- */
+/* The site turns headings into markdown (# ## ###). That is the portfolio's
+   voice, not this app's: "# Monday, Sep 28" reads as a stray character. */
+.lift h1::before,
+.lift h2::before,
+.lift h3::before,
+.lift h4::before {
+  content: "";
+}
+
+/* Empty cells keep their tint so the grid still reads as a grid, but without
+   a glyph in them there is nothing to fight the dates. */
+.cal-cell .cal-m:empty {
+  display: none;
+}
+
+.cal-cell {
+  justify-content: center;
+}
+
+/* The rest pill sat on top of the calendar. Tuck it beside the tab bar. */
+.rest {
+  bottom: 60px;
+  right: 10px;
+}
+
+.rest-pill {
+  min-width: 68px;
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+  opacity: 0.92;
+}
