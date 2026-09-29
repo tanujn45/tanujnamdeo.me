@@ -1303,3 +1303,88 @@ header nav a {
   color: var(--maincolor);
   border-color: var(--maincolor);
 }
+
+/* ---- post-workout summary ---- */
+.sum-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 1rem 0;
+}
+
+.sum-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 6px;
+}
+
+.sum-big {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.sum-small {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.72rem;
+  color: grey;
+}
+
+.sum-verdict {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.up {
+  color: var(--maincolor);
+}
+
+.down {
+  color: grey;
+}
+
+#sum-chart {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  max-width: 100%;
+  max-height: 170px;
+  margin: 0 0 1rem;
+}
+
+.sum-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.sum-name {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+}
+
+.sum-nums {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.78rem;
+  color: grey;
+}
+
+@media screen and (min-width: 640px) {
+  .sum-tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.rest-test {
+  grid-column: span 3;
+  font-size: 0.85rem;
+}

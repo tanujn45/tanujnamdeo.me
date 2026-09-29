@@ -82,6 +82,18 @@ error: Supabase credentials not set</pre>
       <button id="undo-btn" class="btn btn-sm" type="button">Undo</button>
     </div>
 
+    <!-- ============ POST-WORKOUT SUMMARY ============ -->
+    <section id="view-summary" class="view" hidden>
+      <h1 id="sum-title">Done</h1>
+      <p id="sum-meta" class="muted"></p>
+      <div id="sum-tiles" class="sum-tiles"></div>
+      <p id="sum-verdict" class="sum-verdict"></p>
+      <canvas id="sum-chart" height="150"></canvas>
+      <h2>By exercise</h2>
+      <div id="sum-exercises"></div>
+      <button id="sum-done" class="btn btn-primary btn-wide" type="button">Done</button>
+    </section>
+
     <!-- ============ HISTORY ============ -->
     <section id="view-history" class="view" hidden>
       <h1>History</h1>
@@ -150,6 +162,7 @@ error: Supabase credentials not set</pre>
         <button class="rest-preset" type="button" data-s="120">2:00</button>
         <button class="rest-preset" type="button" data-s="180">3:00</button>
         <button class="rest-preset" type="button" data-s="300">5:00</button>
+        <button id="rest-test" class="rest-preset rest-test" type="button">Test sound</button>
         <button id="rest-stop" class="rest-preset rest-stop" type="button">Stop</button>
       </div>
       <button id="rest-pill" class="rest-pill" type="button" aria-label="Rest timer">
@@ -207,8 +220,10 @@ error: Supabase credentials not set</pre>
   let audio: AudioContext | null = null;
   let scheduled: OscillatorNode[] = [];
   let wakeLock: any = null;
+  let beepEl: HTMLAudioElement | null = null;
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
+  let sumChart: Chart | null = null;
 
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
     return Promise.race([
@@ -323,6 +338,7 @@ error: Supabase credentials not set</pre>
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
+    $("sum-done").addEventListener("click", () => goto("home"));
     $("undo-btn").addEventListener("click", undoRemove);
     // The pill always opens the menu. It used to cancel outright while
     // running, which made Stop unreachable and let a mis-tap kill a rest.
@@ -332,6 +348,7 @@ error: Supabase credentials not set</pre>
       show("rest-menu", opening);
       if (opening) $("rest-stop").textContent = restEnd ? "Stop" : "Close";
     });
+    $("rest-test").addEventListener("click", () => { unlockAudio(); setTimeout(ring, 60); });
     $("rest-stop").addEventListener("click", () => {
       // Nothing running: the button is just a way out of the menu.
       if (!restEnd) { show("rest-menu", false); return; }
@@ -378,7 +395,7 @@ error: Supabase credentials not set</pre>
 
   // ------------------------------------------------------------------ views
   function goto(view: string) {
-    for (const v of ["home", "session", "history", "workout", "progress"])
+    for (const v of ["home", "session", "history", "workout", "progress", "summary"])
       show(`view-${v}`, false);
     show("picker", false);
 
@@ -405,6 +422,8 @@ error: Supabase credentials not set</pre>
       renderProgress();
     } else if (view === "workout") {
       show("view-workout");
+    } else if (view === "summary") {
+      show("view-summary");
     }
   }
 
@@ -521,11 +540,138 @@ error: Supabase credentials not set</pre>
         .eq("id", current.id)
     );
     if (error) { say(`Could not finish: ${error.message}`); return; }
-    const w = workouts.find((x) => x.id === current!.id);
+    const finishedId = current.id;
+    const w = workouts.find((x) => x.id === finishedId);
     if (w) w.ended_at = new Date().toISOString();
     current = null;
     stopTimer();
-    goto("home");
+    showSummary(finishedId);
+  }
+
+  // ------------------------------------------------------------- summary
+  // Shown straight after saving: what you just did, against the last time you
+  // trained the same category.
+  function showSummary(id: string) {
+    const w = workouts.find((x) => x.id === id);
+    if (!w) { goto("home"); return; }
+
+    const rows = allSets.filter((x) => x.workout_id === id);
+    const unitOf = (list: SetRow[]) => {
+      const kg = list.filter((r) => r.unit === "kg").length;
+      return kg > list.length - kg ? "kg" : "lbs";
+    };
+    const unit = unitOf(rows);
+    const volOf = (list: SetRow[]) =>
+      Math.round(list.filter((r) => r.unit === unit)
+        .reduce((t, r) => t + r.weight * r.reps, 0));
+
+    const mins = w.ended_at
+      ? Math.max(1, Math.round((+new Date(w.ended_at) - +new Date(w.started_at)) / 60000))
+      : 0;
+    const vol = volOf(rows);
+    const prs = rows.filter(isPR).length;
+
+    // The previous session of this same category that actually had sets.
+    const prev = workouts
+      .filter((x) => x.day === w.day && x.id !== id && x.ended_at &&
+                     allSets.some((r) => r.workout_id === x.id))
+      .sort((a, b) => +new Date(b.started_at) - +new Date(a.started_at))[0];
+    const prevRows = prev ? allSets.filter((x) => x.workout_id === prev.id) : [];
+    const prevVol = prev ? volOf(prevRows) : 0;
+
+    $("sum-title").textContent = `${w.day} done`;
+    $("sum-meta").textContent = `${fmtDate(w.started_at)} · ${mins} min`;
+
+    const delta = prev && prevVol ? Math.round(((vol - prevVol) / prevVol) * 100) : null;
+    const tile = (big: string, small: string) =>
+      `<div class="sum-tile"><span class="sum-big">${big}</span><span class="sum-small">${small}</span></div>`;
+
+    $("sum-tiles").innerHTML =
+      tile(String(rows.length), plural(rows.length, "set").replace(/^\d+ /, "")) +
+      tile(String(vol), `volume (${unit})`) +
+      tile(String(new Set(rows.map((r) => r.exercise_id)).size), "exercises") +
+      (prs ? tile(String(prs), plural(prs, "PR").replace(/^\d+ /, "")) : "");
+
+    $("sum-verdict").innerHTML = !rows.length
+      ? "No sets logged."
+      : delta === null
+        ? `First ${esc(w.day)} session on record — this is the benchmark now.`
+        : delta > 0
+          ? `<strong class="up">▲ ${delta}%</strong> more volume than your last ${esc(w.day)} (${prevVol}).`
+          : delta < 0
+            ? `<strong class="down">▼ ${Math.abs(delta)}%</strong> less volume than your last ${esc(w.day)} (${prevVol}).`
+            : `Same volume as your last ${esc(w.day)}.`;
+
+    renderSummaryChart(w.day, unit, id);
+    renderSummaryExercises(rows, prevRows, unit, prev);
+    goto("summary");
+  }
+
+  function renderSummaryChart(day: string, unit: string, currentId: string) {
+    const canvas = <HTMLCanvasElement>$("sum-chart");
+    const sessions = workouts
+      .filter((x) => x.day === day && allSets.some((r) => r.workout_id === x.id))
+      .sort((a, b) => +new Date(a.started_at) - +new Date(b.started_at))
+      .slice(-8);
+
+    if (sessions.length < 2) {
+      sumChart?.destroy(); sumChart = null;
+      canvas.style.display = "none";
+      return;
+    }
+    canvas.style.display = "";
+
+    const labels = sessions.map((x) => fmtDayKey(dayKey(x.started_at)));
+    const values = sessions.map((x) =>
+      Math.round(allSets.filter((r) => r.workout_id === x.id && r.unit === unit)
+        .reduce((t, r) => t + r.weight * r.reps, 0)));
+    // Highlight the session just finished.
+    const colours = sessions.map((x) =>
+      x.id === currentId ? accent() : "rgba(128,128,128,0.45)");
+
+    sumChart?.destroy();
+    const ink = getComputedStyle(document.documentElement).color;
+    sumChart = new Chart(canvas, {
+      type: "bar",
+      data: { labels, datasets: [{ label: `Volume (${unit})`, data: values, backgroundColor: colours }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: ink }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+        },
+      },
+    });
+  }
+
+  function renderSummaryExercises(rows: SetRow[], prevRows: SetRow[], unit: string, prev?: Workout) {
+    const ids = [...new Set(rows.map((r) => r.exercise_id))];
+    if (!ids.length) { $("sum-exercises").innerHTML = '<p class="muted">Nothing logged.</p>'; return; }
+
+    $("sum-exercises").innerHTML = ids.map((exId) => {
+      const mine = rows.filter((r) => r.exercise_id === exId);
+      const theirs = prevRows.filter((r) => r.exercise_id === exId);
+      const vol = Math.round(mine.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0));
+      const pVol = Math.round(theirs.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0));
+      const best = Math.max(...mine.map((r) => r.weight));
+      const gotPR = mine.some(isPR);
+
+      let note = "";
+      if (!prev) note = '<span class="muted">first time</span>';
+      else if (!theirs.length) note = '<span class="muted">new this session</span>';
+      else if (pVol) {
+        const d = Math.round(((vol - pVol) / pVol) * 100);
+        note = d > 0 ? `<span class="up">▲ ${d}%</span>`
+             : d < 0 ? `<span class="down">▼ ${Math.abs(d)}%</span>`
+             : '<span class="muted">level</span>';
+      }
+
+      return `<div class="sum-row">
+        <span class="sum-name">${esc(nameOf(exId))}${gotPR ? CAT : ""}</span>
+        <span class="sum-nums">${plural(mine.length, "set")} · top ${best}${unit} · ${vol} vol ${note}</span>
+      </div>`;
+    }).join("");
   }
 
   function startTimer() {
@@ -1004,9 +1150,9 @@ error: Supabase credentials not set</pre>
     pill.classList.add("rest-done");
     $("rest-label").textContent = "Go";
     releaseWake();
-    // If the page was frozen past the end, the scheduled tones will have been
-    // missed, so sound them now instead.
-    if (late > 2000) ring();
+    // The scheduled tones may never have sounded (a suspended context, a
+    // muted switch); ringing again here costs an echo at worst.
+    ring();
     // Leave "Go" up for a while; it is the thing you glance at.
     setTimeout(() => {
       if (restEnd) return;
@@ -1018,9 +1164,67 @@ error: Supabase credentials not set</pre>
   // Created on a tap so the browser lets it make noise later.
   function unlockAudio() {
     try {
+      // iOS 16.4+: without this, Web Audio obeys the physical ringer switch,
+      // so a muted phone gives a completely silent alarm.
+      const sess = (navigator as any).audioSession;
+      if (sess) sess.type = "playback";
+    } catch (e) {}
+
+    try {
       if (!audio) audio = new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audio.state === "suspended") audio.resume();
     } catch (e) { audio = null; }
+
+    // A media element is a second route to sound: it survives cases where the
+    // AudioContext has been suspended out from under us.
+    try {
+      if (!beepEl) {
+        beepEl = new Audio(beepDataUri());
+        beepEl.preload = "auto";
+        (beepEl as any).playsInline = true;
+      }
+      // Priming inside the gesture is what buys us play() later.
+      beepEl.muted = true;
+      beepEl.play().then(() => {
+        beepEl!.pause();
+        beepEl!.currentTime = 0;
+        beepEl!.muted = false;
+      }).catch(() => { beepEl!.muted = false; });
+    } catch (e) { beepEl = null; }
+  }
+
+  // Three rising tones as a 16-bit PCM WAV, built once at runtime so there is
+  // no asset to fetch when it is needed.
+  function beepDataUri(): string {
+    const rate = 44100, dur = 0.85;
+    const n = Math.floor(rate * dur);
+    const buf = new ArrayBuffer(44 + n * 2);
+    const view = new DataView(buf);
+    const str = (off: number, t: string) => {
+      for (let i = 0; i < t.length; i++) view.setUint8(off + i, t.charCodeAt(i));
+    };
+    str(0, "RIFF"); view.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt ");
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    str(36, "data"); view.setUint32(40, n * 2, true);
+
+    const tones = [[0, 0.22, 660], [0.28, 0.5, 880], [0.56, 0.78, 1100]];
+    for (let i = 0; i < n; i++) {
+      const t = i / rate;
+      let v = 0;
+      for (const [a, b, f] of tones) {
+        if (t >= a && t < b) {
+          const env = Math.min(1, (t - a) / 0.01) * Math.min(1, (b - t) / 0.06);
+          v += Math.sin(2 * Math.PI * f * t) * 0.4 * env;
+        }
+      }
+      view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v)) * 32767, true);
+    }
+    let bin = "";
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return "data:audio/wav;base64," + btoa(bin);
   }
 
   function scheduleRing(inSeconds: number) {
@@ -1065,6 +1269,10 @@ error: Supabase credentials not set</pre>
 
   function ring() {
     try { navigator.vibrate?.([250, 120, 250, 120, 450]); } catch (e) {}
+    try {
+      if (beepEl) { beepEl.currentTime = 0; beepEl.play().catch(() => {}); }
+    } catch (e) {}
+    try { if (audio?.state === "suspended") audio.resume(); } catch (e) {}
     if (!audio) return;
     // Three rising beeps: audible over music without being a klaxon.
     [0, 0.28, 0.56].forEach((at, i) => {
