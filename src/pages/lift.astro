@@ -221,6 +221,16 @@ error: Supabase credentials not set</pre>
   };
   const ACCOUNT_EMAIL = ACCOUNTS.tanuj;   // used by the localhost auto-login
   const LABELS: Record<string, string> = { tanuj: "Tanuj", lily: "Lily" };
+  const NAME_BY_EMAIL: Record<string, string> = Object.fromEntries(
+    Object.entries(ACCOUNTS).map(([who, email]) => [email, LABELS[who] ?? who])
+  );
+
+  // The header carries the portfolio's name by default; in the app it should
+  // say who is using it.
+  function setSiteName(email?: string | null) {
+    const el = document.getElementById("site-name");
+    if (el) el.textContent = email ? (NAME_BY_EMAIL[email] ?? "Lift") : "Lift";
+  }
   let pickedWho: string | null = null;
   const DAYS = ["Legs", "Shoulders", "Chest", "Back", "Arms"];
 
@@ -329,17 +339,17 @@ error: Supabase credentials not set</pre>
         email: ACCOUNT_EMAIL,
         password: import.meta.env.PUBLIC_DEV_PASSWORD,
       });
-      if (dev.user) { await afterSignIn(dev.user.id); wire(); return; }
+      if (dev.user) { await afterSignIn(dev.user.id, dev.user.email); wire(); return; }
     }
 
-    if (data.session) await afterSignIn(data.session.user.id);
-    else show("auth");
+    if (data.session) await afterSignIn(data.session.user.id, data.session.user.email);
+    else { setSiteName(null); show("auth"); }
 
     // Never call supabase from inside this callback: it holds a lock and
     // every query awaits getSession(), which deadlocks.
     supabase.auth.onAuthStateChange((_e, session) => {
       if (!session || userId) return;
-      setTimeout(() => afterSignIn(session.user.id), 0);
+      setTimeout(() => afterSignIn(session.user.id, session.user.email), 0);
     });
 
     wire();
@@ -392,7 +402,7 @@ error: Supabase credentials not set</pre>
       }
       try { localStorage.setItem("lift:who", who); } catch (e) {}
       $("auth-msg").textContent = "";
-      if (data.user) await afterSignIn(data.user.id);
+      if (data.user) await afterSignIn(data.user.id, data.user.email);
     });
 
     $("signout").addEventListener("click", async () => {
@@ -444,9 +454,10 @@ error: Supabase credentials not set</pre>
   }
 
   // ---------------------------------------------------------------- loading
-  async function afterSignIn(id: string) {
+  async function afterSignIn(id: string, email?: string | null) {
     if (userId === id) return;
     userId = id;
+    setSiteName(email);
     show("auth", false);
 
     const [ex, dy, ed, wo, st] = await Promise.all([

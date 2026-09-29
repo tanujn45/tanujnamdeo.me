@@ -1698,6 +1698,14 @@ header nav a {
 #auth .stack {
   width: 100%;
   max-width: 380px;
+  gap: 12px;
+}
+
+/* A stretched .linkish became a 380px red rule across the form. */
+#auth-back {
+  align-self: center;
+  width: auto;
+  margin-top: 4px;
 }
 
 #auth-msg {
@@ -1705,7 +1713,7 @@ header nav a {
 }
 
 #auth-who {
-  margin: 0;
+  margin: 0 0 4px;
   text-align: center;
 }
 
