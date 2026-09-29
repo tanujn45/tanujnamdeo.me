@@ -192,7 +192,6 @@ error: Supabase credentials not set</pre>
         <button class="rest-preset" type="button" data-s="120">2:00</button>
         <button class="rest-preset" type="button" data-s="180">3:00</button>
         <button class="rest-preset" type="button" data-s="300">5:00</button>
-        <button id="rest-test" class="rest-preset rest-test" type="button">Test sound</button>
         <button id="rest-stop" class="rest-preset rest-stop" type="button">Stop</button>
       </div>
       <button id="rest-pill" class="rest-pill" type="button" aria-label="Rest timer">
@@ -430,7 +429,6 @@ error: Supabase credentials not set</pre>
       show("rest-menu", opening);
       if (opening) $("rest-stop").textContent = restEnd ? "Stop" : "Close";
     });
-    $("rest-test").addEventListener("click", () => { unlockAudio(); setTimeout(ring, 60); });
     $("rest-stop").addEventListener("click", () => {
       // Nothing running: the button is just a way out of the menu.
       if (!restEnd) { show("rest-menu", false); return; }

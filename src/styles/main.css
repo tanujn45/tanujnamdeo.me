@@ -1385,10 +1385,6 @@ header nav a {
   }
 }
 
-.rest-test {
-  grid-column: span 3;
-  font-size: 0.85rem;
-}
 
 /* ---- manage: one list of categories you open ---- */
 .mg-group {
