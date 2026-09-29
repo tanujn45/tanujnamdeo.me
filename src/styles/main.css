@@ -1121,3 +1121,30 @@ header nav a {
   margin-left: 5px;
   vertical-align: -0.18em;
 }
+
+/* ---- undo bar ---- */
+.undo-bar {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: 64px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--maincolor);
+  border-radius: 6px;
+}
+
+[data-theme="dark"] .undo-bar {
+  background: #111;
+}
+
+.undo-bar .btn {
+  flex: 0 0 auto;
+}

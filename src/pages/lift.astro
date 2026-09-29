@@ -77,6 +77,11 @@ error: Supabase credentials not set</pre>
       <p id="session-msg" class="description" role="status"></p>
     </section>
 
+    <div id="undo-bar" class="undo-bar" hidden>
+      <span id="undo-text"></span>
+      <button id="undo-btn" class="btn btn-sm" type="button">Undo</button>
+    </div>
+
     <!-- ============ HISTORY ============ -->
     <section id="view-history" class="view" hidden>
       <h1>History</h1>
@@ -178,6 +183,9 @@ error: Supabase credentials not set</pre>
   let discardArmed = false;
   let calMonth: Date | null = null;   // first day of the month on screen
   let removeArmed: string | null = null;
+  // Keeps the last removal around so it can be put back verbatim.
+  let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
+  let undoTimer: number | null = null;
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
 
@@ -294,6 +302,7 @@ error: Supabase credentials not set</pre>
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
+    $("undo-btn").addEventListener("click", undoRemove);
     $("overall-metric").addEventListener("change", renderOverall);
     $("cal-prev").addEventListener("click", () => stepMonth(-1));
     $("cal-next").addEventListener("click", () => stepMonth(1));
@@ -576,10 +585,11 @@ error: Supabase credentials not set</pre>
 
   async function removeExercise(exId: string) {
     if (!current) return;
-    const logged = allSets.filter((s) => s.workout_id === current!.id && s.exercise_id === exId);
+    const logged = allSets.filter((x) => x.workout_id === current!.id && x.exercise_id === exId);
 
-    // Removing something with sets deletes those sets, so make it two taps.
-    if (logged.length && removeArmed !== exId) {
+    // Always two taps, including when nothing is logged: a single tap used to
+    // remove an empty exercise outright, which is easy to do by accident.
+    if (removeArmed !== exId) {
       removeArmed = exId;
       renderSession();
       setTimeout(() => {
@@ -591,16 +601,67 @@ error: Supabase credentials not set</pre>
     }
     removeArmed = null;
 
+    const position = Math.max(0, sessionExercises.indexOf(exId));
+    const workoutId = current.id;
+
     if (logged.length) {
       const { error } = await supabase.from("sets").delete()
-        .eq("workout_id", current.id).eq("exercise_id", exId);
+        .eq("workout_id", workoutId).eq("exercise_id", exId);
       if (error) { say(`Could not remove: ${error.message}`); return; }
-      allSets = allSets.filter((s) => !(s.workout_id === current!.id && s.exercise_id === exId));
+      allSets = allSets.filter((x) => !(x.workout_id === workoutId && x.exercise_id === exId));
     }
     const { error } = await supabase.from("workout_exercises").delete()
-      .eq("workout_id", current.id).eq("exercise_id", exId);
+      .eq("workout_id", workoutId).eq("exercise_id", exId);
     if (error) { say(`Could not remove: ${error.message}`); return; }
+
     sessionExercises = sessionExercises.filter((i) => i !== exId);
+    lastRemoved = { exId, position, sets: logged, workoutId };
+    renderSession();
+    showUndo(
+      `Removed ${nameOf(exId)}` +
+        (logged.length ? ` and ${plural(logged.length, "set")}` : "")
+    );
+  }
+
+  function showUndo(text: string) {
+    $("undo-text").textContent = text;
+    show("undo-bar");
+    if (undoTimer) clearTimeout(undoTimer);
+    undoTimer = window.setTimeout(() => {
+      lastRemoved = null;
+      show("undo-bar", false);
+    }, 10000);
+  }
+
+  async function undoRemove() {
+    if (!lastRemoved) return;
+    const { exId, position, sets, workoutId } = lastRemoved;
+    lastRemoved = null;
+    if (undoTimer) clearTimeout(undoTimer);
+    show("undo-bar", false);
+
+    const { error } = await withTimeout(
+      supabase.from("workout_exercises").insert({
+        user_id: userId, workout_id: workoutId, exercise_id: exId, position,
+      })
+    );
+    if (error) { say(`Could not undo: ${error.message}`); return; }
+
+    if (sets.length) {
+      // Re-inserted with their original ids and timestamps, so set numbers,
+      // history and PR comparisons all land exactly where they were.
+      const { error: setErr } = await withTimeout(
+        supabase.from("sets").insert(sets.map((x) => ({ ...x, user_id: userId })))
+      );
+      if (setErr) { say(`Exercise restored, but sets failed: ${setErr.message}`); }
+      else allSets.unshift(...sets);
+    }
+
+    if (!sessionExercises.includes(exId)) {
+      sessionExercises.splice(Math.min(position, sessionExercises.length), 0, exId);
+    }
+    say("");
+    renderAddPicker();
     renderSession();
   }
 
@@ -685,7 +746,9 @@ error: Supabase credentials not set</pre>
         <header class="ex-head">
           <h2>${esc(ex.name)}</h2>
           <button type="button" class="linkish remove-ex${removeArmed === exId ? " armed" : ""}" data-ex="${exId}">${
-            removeArmed === exId ? `delete ${done.length} set(s)?` : "remove"
+            removeArmed === exId
+              ? (done.length ? `remove and delete ${plural(done.length, "set")}?` : "remove?")
+              : "remove"
           }</button>
         </header>
         <ul class="set-list">${rows}</ul>
