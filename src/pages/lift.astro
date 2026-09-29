@@ -142,6 +142,21 @@ error: Supabase credentials not set</pre>
       </div>
     </div>
 
+    <!-- ============ REST TIMER ============ -->
+    <div id="rest" class="rest" hidden>
+      <div id="rest-menu" class="rest-menu" hidden>
+        <button class="rest-preset" type="button" data-s="60">1:00</button>
+        <button class="rest-preset" type="button" data-s="90">1:30</button>
+        <button class="rest-preset" type="button" data-s="120">2:00</button>
+        <button class="rest-preset" type="button" data-s="180">3:00</button>
+        <button class="rest-preset" type="button" data-s="300">5:00</button>
+        <button id="rest-stop" class="rest-preset rest-stop" type="button">Stop</button>
+      </div>
+      <button id="rest-pill" class="rest-pill" type="button" aria-label="Rest timer">
+        <span id="rest-label">Rest</span>
+      </button>
+    </div>
+
     <!-- ============ TABS ============ -->
     <nav id="tabs" class="tabbar" hidden>
       <button class="tab" data-view="home" type="button">Workout</button>
@@ -187,6 +202,9 @@ error: Supabase credentials not set</pre>
   // Keeps the last removal around so it can be put back verbatim.
   let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
   let undoTimer: number | null = null;
+  let restEnd: number | null = null;      // epoch ms the rest ends
+  let restHandle: number | null = null;
+  let audio: AudioContext | null = null;
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
 
@@ -304,6 +322,15 @@ error: Supabase credentials not set</pre>
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
     $("undo-btn").addEventListener("click", undoRemove);
+    $("rest-pill").addEventListener("click", () => {
+      // Tapping while it runs stops it; otherwise open the presets.
+      if (restEnd) { stopRest(); return; }
+      const m = $("rest-menu");
+      show("rest-menu", (<any>m).hidden);
+    });
+    $("rest-stop").addEventListener("click", stopRest);
+    document.querySelectorAll<HTMLButtonElement>(".rest-preset[data-s]").forEach((b) =>
+      b.addEventListener("click", () => startRest(parseInt(b.dataset.s!, 10))));
     $("overall-metric").addEventListener("change", renderOverall);
     $("cal-prev").addEventListener("click", () => stepMonth(-1));
     $("cal-next").addEventListener("click", () => stepMonth(1));
@@ -334,6 +361,8 @@ error: Supabase credentials not set</pre>
     allSets = (st.data ?? []) as SetRow[];
 
     show("tabs");
+    show("rest");
+    restoreRest();
     const open = workouts.find((w) => !w.ended_at);
     if (open) await enterSession(open);
     else goto("home");
@@ -915,6 +944,102 @@ error: Supabase credentials not set</pre>
     if (error) { say(`Could not delete: ${error.message}`); return; }
     allSets = allSets.filter((s) => s.id !== id);
     renderSession();
+  }
+
+  // --------------------------------------------------------- rest timer
+  // Counts to an absolute end time rather than decrementing, so a phone
+  // throttling timers in the background cannot make it drift.
+  function startRest(seconds: number) {
+    unlockAudio();
+    restEnd = Date.now() + seconds * 1000;
+    try { localStorage.setItem("lift:restEnd", String(restEnd)); } catch (e) {}
+    show("rest-menu", false);
+    $("rest-pill").classList.add("rest-running");
+    tickRest();
+    if (restHandle) clearInterval(restHandle);
+    restHandle = window.setInterval(tickRest, 250);
+  }
+
+  function stopRest() {
+    restEnd = null;
+    try { localStorage.removeItem("lift:restEnd"); } catch (e) {}
+    if (restHandle) clearInterval(restHandle);
+    restHandle = null;
+    show("rest-menu", false);
+    const pill = $("rest-pill");
+    pill.classList.remove("rest-running", "rest-done");
+    $("rest-label").textContent = "Rest";
+  }
+
+  function tickRest() {
+    if (!restEnd) return;
+    const left = Math.round((restEnd - Date.now()) / 1000);
+    if (left > 0) {
+      const m = Math.floor(left / 60);
+      $("rest-label").textContent = `${m}:${String(left % 60).padStart(2, "0")}`;
+      return;
+    }
+    // Done.
+    restEnd = null;
+    try { localStorage.removeItem("lift:restEnd"); } catch (e) {}
+    if (restHandle) clearInterval(restHandle);
+    restHandle = null;
+    const pill = $("rest-pill");
+    pill.classList.remove("rest-running");
+    pill.classList.add("rest-done");
+    $("rest-label").textContent = "Go";
+    ring();
+    // Leave "Go" up for a while; it is the thing you glance at.
+    setTimeout(() => {
+      if (restEnd) return;
+      pill.classList.remove("rest-done");
+      $("rest-label").textContent = "Rest";
+    }, 15000);
+  }
+
+  // Created on a tap so the browser lets it make noise later.
+  function unlockAudio() {
+    try {
+      if (!audio) audio = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+    } catch (e) { audio = null; }
+  }
+
+  function ring() {
+    try { navigator.vibrate?.([250, 120, 250, 120, 450]); } catch (e) {}
+    if (!audio) return;
+    // Three rising beeps: audible over music without being a klaxon.
+    [0, 0.28, 0.56].forEach((at, i) => {
+      const osc = audio!.createOscillator();
+      const gain = audio!.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 660 + i * 220;
+      const t = audio!.currentTime + at;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      osc.connect(gain).connect(audio!.destination);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    });
+  }
+
+  // A reload mid-rest should pick the countdown back up.
+  function restoreRest() {
+    // Sign-in can settle after a rest has already been started by hand; do
+    // not adopt a stale end time or start a second interval over the top.
+    if (restEnd) return;
+    try {
+      const saved = parseInt(localStorage.getItem("lift:restEnd") ?? "", 10);
+      if (saved && saved > Date.now()) {
+        restEnd = saved;
+        $("rest-pill").classList.add("rest-running");
+        tickRest();
+        restHandle = window.setInterval(tickRest, 250);
+      } else if (saved) {
+        localStorage.removeItem("lift:restEnd");
+      }
+    } catch (e) {}
   }
 
   // ---------------------------------------------------------- consistency
