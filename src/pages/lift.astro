@@ -106,18 +106,20 @@ error: Supabase credentials not set</pre>
 
     <!-- ============ MANAGE ============ -->
     <section id="view-manage" class="view" hidden>
-      <button id="manage-back" class="linkish" type="button">← Back</button>
-      <h1>Manage</h1>
+      <div class="screen-head">
+        <h1>Manage</h1>
+        <button id="manage-back" class="linkish" type="button">Done</button>
+      </div>
+      <p class="muted">Tap a category to see what is in it.</p>
 
-      <h2>Categories</h2>
-      <div id="manage-days"></div>
-      <form id="new-day-form" class="stack manage-new">
-        <input type="text" id="new-day-name" placeholder="New category, e.g. Push" />
-        <button type="submit" class="btn btn-primary">Add category</button>
+      <div id="manage-list"></div>
+
+      <form id="new-day-form" class="manage-add manage-new-day">
+        <input type="text" id="new-day-name" placeholder="New category…" />
+        <button type="submit" class="btn btn-sm">Add</button>
       </form>
 
-      <h2>Exercises</h2>
-      <div id="manage-exercises"></div>
+      <div id="manage-hidden"></div>
       <p id="manage-msg" class="picker-msg" role="status"></p>
     </section>
 
@@ -232,7 +234,9 @@ error: Supabase credentials not set</pre>
   let removeArmed: string | null = null;
   let pickerArmed: string | null = null;
   let days: { id: string; name: string; position: number }[] = [];
-  let manageArmed: string | null = null;
+  let mgOpen = new Set<string>();
+  let mgEditEx: string | null = null;
+  let mgEditDay: string | null = null;
   // Keeps the last removal around so it can be put back verbatim.
   let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
   let undoTimer: number | null = null;
@@ -451,7 +455,8 @@ error: Supabase credentials not set</pre>
       renderProgressPicker();
       renderProgress();
     } else if (view === "manage") {
-      manageArmed = null;
+      mgEditEx = null;
+      mgEditDay = null;
       mSay("");
       show("view-manage");
       renderManage();
@@ -1361,99 +1366,173 @@ error: Supabase credentials not set</pre>
   const mSay = (t: string) => ($("manage-msg").textContent = t);
 
   function renderManage() {
-    // --- categories ---
-    $("manage-days").innerHTML = days.length
-      ? days.map((d) => {
-          const uses = exercises.filter((e) => e.day === d.name && !e.archived).length;
-          const armed = manageArmed === `day:${d.id}`;
-          if (armed) {
-            return `<div class="manage-row confirm-row">
-              <span class="confirm-q">${uses ? `Move ${plural(uses, "exercise")} out first` : `Delete ${esc(d.name)}?`}</span>
-              ${uses ? "" : `<button type="button" class="btn btn-sm confirm-yes mg-day-yes" data-id="${d.id}">Yes</button>`}
-              <button type="button" class="btn btn-sm mg-cancel">${uses ? "OK" : "No"}</button>
-            </div>`;
-          }
-          return `<div class="manage-row">
-            <span class="manage-name">${esc(d.name)}</span>
-            <span class="manage-meta">${plural(uses, "exercise")}</span>
-            <button type="button" class="icon-btn mg-day-del" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button>
-          </div>`;
-        }).join("")
-      : '<p class="muted">No categories.</p>';
-
-    // --- exercises, grouped by category ---
     const live = exercises.filter((e) => !e.archived);
     const archived = exercises.filter((e) => e.archived);
-    const exerciseRow = (e: Exercise) => {
-      {
-        const used = allSets.some((x) => x.exercise_id === e.id);
-        if (manageArmed === `ex:${e.id}`) {
-          return `<div class="manage-row confirm-row">
-            <span class="confirm-q">${used ? "Hide it? History is kept." : "Delete it?"}</span>
-            <button type="button" class="btn btn-sm confirm-yes mg-ex-yes" data-id="${e.id}">Yes</button>
-            <button type="button" class="btn btn-sm mg-cancel">No</button>
-          </div>`;
+
+    $("manage-list").innerHTML = dayNames().map((name) => {
+      const inDay = live.filter((e) => e.day === name);
+      const open = mgOpen.has(name);
+
+      // The category header, or its editor in place of it.
+      const head = mgEditDay === name
+        ? `<div class="mg-edit">
+             <input type="text" class="md-name" value="${esc(name)}" aria-label="Category name" />
+             <div class="mg-edit-actions">
+               <button type="button" class="btn btn-sm md-save" data-day="${esc(name)}">Save</button>
+               <button type="button" class="btn btn-sm md-del" data-day="${esc(name)}"${inDay.length ? " disabled" : ""}>Delete</button>
+               <button type="button" class="btn btn-sm mg-cancel">Cancel</button>
+             </div>
+             ${inDay.length ? `<span class="mg-why">Move its ${plural(inDay.length, "exercise")} elsewhere before deleting.</span>` : ""}
+           </div>`
+        : `<div class="mg-head">
+             <button type="button" class="mg-toggle" data-day="${esc(name)}">
+               <span class="mg-caret">${open ? "▾" : "▸"}</span>
+               <span class="mg-title">${esc(name)}</span>
+               <span class="mg-count">${inDay.length}</span>
+             </button>
+             <button type="button" class="icon-btn mg-day-edit" data-day="${esc(name)}" aria-label="Edit ${esc(name)}">✎</button>
+           </div>`;
+
+      if (!open || mgEditDay === name) return `<div class="mg-group">${head}</div>`;
+
+      const rows = inDay.map((e) => {
+        if (mgEditEx !== e.id) {
+          return `<button type="button" class="mg-row mg-ex-edit" data-id="${e.id}">
+            <span class="mg-row-name">${esc(e.name)}</span>
+            <span class="mg-row-hint">edit</span>
+          </button>`;
         }
-        return `<div class="manage-row">
-          <span class="manage-name">${esc(e.name)}</span>
-          <select class="mg-move" data-id="${e.id}" aria-label="Category for ${esc(e.name)}">
+        const used = allSets.some((x) => x.exercise_id === e.id);
+        return `<div class="mg-edit">
+          <input type="text" class="me-name" value="${esc(e.name)}" aria-label="Exercise name" />
+          <select class="me-day" aria-label="Category">
             ${dayNames().map((n) => `<option value="${esc(n)}"${n === e.day ? " selected" : ""}>${esc(n)}</option>`).join("")}
           </select>
-          <button type="button" class="icon-btn mg-ex-del" data-id="${e.id}" aria-label="Remove ${esc(e.name)}">×</button>
+          <div class="mg-edit-actions">
+            <button type="button" class="btn btn-sm me-save" data-id="${e.id}">Save</button>
+            <button type="button" class="btn btn-sm me-del" data-id="${e.id}">${used ? "Hide" : "Delete"}</button>
+            <button type="button" class="btn btn-sm mg-cancel">Cancel</button>
+          </div>
+          ${used ? '<span class="mg-why">It has sets logged, so hiding keeps the history.</span>' : ""}
         </div>`;
-      }
-    };
+      }).join("");
 
-    let html = "";
-
-    // Every category gets its own add box, including empty ones.
-    html = dayNames().map((name) => {
-      const inDay = live.filter((e) => e.day === name);
-      const group = inDay.length
-        ? `<h3 class="manage-group">${esc(name)}</h3>` + inDay.map((e) => exerciseRow(e)).join("")
-        : `<h3 class="manage-group">${esc(name)}</h3>`;
-      return group + `<form class="manage-add" data-day="${esc(name)}">
-          <input type="text" class="mg-new-name" placeholder="Add to ${esc(name)}…" />
-          <button type="submit" class="btn btn-sm">Add</button>
-        </form>`;
+      return `<div class="mg-group mg-group-open">${head}
+        <div class="mg-body">
+          ${rows || '<p class="muted mg-empty">Nothing here yet.</p>'}
+          <form class="manage-add" data-day="${esc(name)}">
+            <input type="text" class="mg-new-name" placeholder="Add an exercise…" />
+            <button type="submit" class="btn btn-sm">Add</button>
+          </form>
+        </div>
+      </div>`;
     }).join("");
 
-    if (archived.length) {
-      html += `<h3 class="manage-group">Hidden</h3>` + archived.map((e) =>
-        `<div class="manage-row">
-          <span class="manage-name muted">${esc(e.name)}</span>
-          <button type="button" class="btn btn-sm mg-restore" data-id="${e.id}">Restore</button>
-        </div>`).join("");
-    }
+    // Hidden exercises, collapsed and out of the way at the bottom.
+    $("manage-hidden").innerHTML = archived.length
+      ? `<div class="mg-group"><div class="mg-head">
+           <button type="button" class="mg-toggle" data-day="__hidden">
+             <span class="mg-caret">${mgOpen.has("__hidden") ? "▾" : "▸"}</span>
+             <span class="mg-title">Hidden</span>
+             <span class="mg-count">${archived.length}</span>
+           </button></div>
+         ${mgOpen.has("__hidden") ? `<div class="mg-body">${archived.map((e) =>
+            `<div class="mg-row">
+               <span class="mg-row-name muted">${esc(e.name)}</span>
+               <button type="button" class="btn btn-sm mg-restore" data-id="${e.id}">Restore</button>
+             </div>`).join("")}</div>` : ""}
+         </div>`
+      : "";
 
-    $("manage-exercises").innerHTML = html || '<p class="muted">No exercises yet.</p>';
-
-    const on = (sel: string, fn: (b: HTMLButtonElement) => void) =>
-      $("view-manage").querySelectorAll<HTMLButtonElement>(sel).forEach((b) =>
+    const host = $("view-manage");
+    const on = (sel: string, fn: (b: HTMLElement) => void) =>
+      host.querySelectorAll<HTMLElement>(sel).forEach((b) =>
         b.addEventListener("click", () => fn(b)));
 
-    on(".mg-day-del", (b) => { manageArmed = `day:${b.dataset.id}`; renderManage(); });
-    on(".mg-ex-del", (b) => { manageArmed = `ex:${b.dataset.id}`; renderManage(); });
-    on(".mg-cancel", () => { manageArmed = null; renderManage(); });
-    on(".mg-day-yes", async (b) => { await deleteDay(b.dataset.id!); });
-    // Await it: re-rendering straight away redrew the row still in place.
-    on(".mg-ex-yes", async (b) => {
-      manageArmed = null;
+    on(".mg-toggle", (b) => {
+      const d = b.dataset.day!;
+      if (mgOpen.has(d)) mgOpen.delete(d); else mgOpen.add(d);
+      mgEditEx = null; mgEditDay = null;
+      renderManage();
+    });
+    on(".mg-day-edit", (b) => { mgEditDay = b.dataset.day!; mgEditEx = null; renderManage(); });
+    on(".mg-ex-edit", (b) => { mgEditEx = b.dataset.id!; mgEditDay = null; renderManage(); });
+    on(".mg-cancel", () => { mgEditEx = null; mgEditDay = null; mSay(""); renderManage(); });
+    on(".md-save", async (b) => {
+      const input = host.querySelector<HTMLInputElement>(".md-name")!;
+      await renameDay(b.dataset.day!, input.value.trim());
+    });
+    on(".md-del", async (b) => { await deleteDayByName(b.dataset.day!); });
+    on(".me-save", async (b) => {
+      const name = host.querySelector<HTMLInputElement>(".me-name")!.value.trim();
+      const day = host.querySelector<HTMLSelectElement>(".me-day")!.value;
+      await saveExercise(b.dataset.id!, name, day);
+    });
+    on(".me-del", async (b) => {
+      mgEditEx = null;
       await deleteExercise(b.dataset.id!);
       mSay($("picker-msg").textContent || "");
       renderManage();
     });
     on(".mg-restore", async (b) => { await restoreExercise(b.dataset.id!); });
 
-    $("view-manage").querySelectorAll<HTMLSelectElement>(".mg-move").forEach((sel) =>
-      sel.addEventListener("change", () => moveExercise(sel.dataset.id!, sel.value)));
-
-    $("view-manage").querySelectorAll<HTMLFormElement>(".manage-add").forEach((f) =>
+    host.querySelectorAll<HTMLFormElement>(".manage-add[data-day]").forEach((f) =>
       f.addEventListener("submit", (ev) => {
         ev.preventDefault();
         const input = f.querySelector<HTMLInputElement>(".mg-new-name")!;
         addExerciseToDay(input.value.trim(), f.dataset.day!, input);
       }));
+  }
+
+  async function saveExercise(exId: string, name: string, day: string) {
+    if (!name) return;
+    const { error } = await withTimeout(
+      supabase.from("exercises").update({ name, day }).eq("id", exId)
+    );
+    if (error) {
+      mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
+      return;
+    }
+    const e = exercises.find((x) => x.id === exId);
+    if (e) { e.name = name; e.day = day; }
+    exercises.sort((a, b) => a.name.localeCompare(b.name));
+    mgEditEx = null;
+    mSay(`Saved ${name}.`);
+    renderManage();
+  }
+
+  // The category name is stored on exercises and workouts too, so a rename
+  // has to carry through all three or history would point at nothing.
+  async function renameDay(oldName: string, newName: string) {
+    if (!newName || newName === oldName) { mgEditDay = null; renderManage(); return; }
+    const row = days.find((d) => d.name === oldName);
+    if (!row) return;
+
+    const { error } = await withTimeout(
+      supabase.from("days").update({ name: newName }).eq("id", row.id)
+    );
+    if (error) {
+      mSay(error.message.includes("duplicate") ? `"${newName}" already exists.` : `Error: ${error.message}`);
+      return;
+    }
+    await supabase.from("exercises").update({ day: newName }).eq("day", oldName);
+    await supabase.from("workouts").update({ day: newName }).eq("day", oldName);
+
+    row.name = newName;
+    exercises.forEach((e) => { if (e.day === oldName) e.day = newName; });
+    workouts.forEach((w) => { if (w.day === oldName) w.day = newName; });
+    if (mgOpen.delete(oldName)) mgOpen.add(newName);
+    mgEditDay = null;
+    mSay(`Renamed to ${newName}.`);
+    renderDayButtons();
+    renderManage();
+  }
+
+  async function deleteDayByName(name: string) {
+    const row = days.find((d) => d.name === name);
+    if (!row) return;
+    mgEditDay = null;
+    await deleteDay(row.id);
   }
 
   async function addExerciseToDay(name: string, day: string, input: HTMLInputElement) {
@@ -1495,7 +1574,6 @@ error: Supabase credentials not set</pre>
   }
 
   async function deleteDay(id: string) {
-    manageArmed = null;
     const d = days.find((x) => x.id === id);
     const { error } = await withTimeout(supabase.from("days").delete().eq("id", id));
     if (error) { mSay(`Could not delete: ${error.message}`); return; }
