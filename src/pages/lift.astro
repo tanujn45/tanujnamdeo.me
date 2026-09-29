@@ -1587,10 +1587,14 @@ error: Supabase credentials not set</pre>
       // is one tap rather than retyping it slightly differently.
       const refresh = () => {
         const hits = suggestFor(input.value, day);
+        // Full-width rows, like everything else in Manage. Inline chips sat
+        // mid-line beside the label and read as a layout mistake.
         strip.innerHTML = hits.length
-          ? `<span class="mg-suggest-label">Already have:</span>` + hits.map((e) =>
+          ? hits.map((e) =>
               `<button type="button" class="mg-suggest-item" data-id="${e.id}" data-day="${esc(day)}">
-                 ${esc(e.name)}<span class="mg-suggest-in">${esc(categoriesOf(e).join(", "))}</span>
+                 <span class="mg-suggest-name">${esc(e.name)}</span>
+                 <span class="mg-suggest-in">${esc(categoriesOf(e).join(", "))}</span>
+                 <span class="mg-suggest-add">add</span>
                </button>`).join("")
           : "";
         strip.querySelectorAll<HTMLButtonElement>(".mg-suggest-item").forEach((b) =>

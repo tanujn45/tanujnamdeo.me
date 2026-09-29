@@ -1497,7 +1497,7 @@ header nav a {
 .manage-add {
   display: flex;
   gap: 8px;
-  margin: 8px 0 2px;
+  margin: 8px 0 0;
 }
 
 .manage-add input {
@@ -1581,40 +1581,48 @@ header nav a {
 /* ---- existing-exercise suggestions while typing ---- */
 .mg-suggest {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 2px 0 6px;
+  flex-direction: column;
+  gap: 4px;
+  /* Sits tight under the input it belongs to. */
+  margin: 4px 0 8px;
 }
 
 .mg-suggest:empty {
   margin: 0;
 }
 
-.mg-suggest-label {
-  font-family: "Roboto Mono", monospace;
-  font-size: 0.7rem;
-  color: grey;
-}
 
 .mg-suggest-item {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-height: 36px;
-  padding: 4px 10px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
   font-family: "Roboto Mono", monospace;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
+  text-align: left;
   color: inherit;
   background: transparent;
-  border: 1px dashed var(--maincolor);
+  border: 1px dashed rgba(128, 128, 128, 0.55);
   border-radius: 4px;
   cursor: pointer;
 }
 
+.mg-suggest-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .mg-suggest-in {
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   color: grey;
+}
+
+.mg-suggest-add {
+  font-size: 0.7rem;
+  color: var(--maincolor);
 }
 
 .mg-dupe {
