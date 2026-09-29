@@ -4,7 +4,7 @@ import Layout from "../layouts/Layout.astro";
 const DAYS = ["Legs", "Shoulders", "Chest", "Back", "Arms"];
 ---
 
-<Layout title="Lift" description="Private workout log." noindex>
+<Layout title="Lift" description="Private workout log." noindex bare>
   <main class="lift">
     <section id="unconfigured" hidden>
       <h1>Lift</h1>
@@ -42,6 +42,7 @@ error: Supabase credentials not set</pre>
         </div>
         <div id="cal" class="cal-grid"></div>
         <p id="cal-note" class="muted"></p>
+        <div id="cal-day"></div>
       </section>
 
       <p class="muted">
@@ -190,6 +191,21 @@ error: Supabase credentials not set</pre>
   }
 
   const say = (m: string) => ($("session-msg").textContent = m);
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+  // Charts should use the site's own accent rather than a colour of their own.
+  const accent = () =>
+    getComputedStyle(document.documentElement).getPropertyValue("--maincolor").trim() || "red";
+  const accentFill = (a: number) => {
+    const c = accent();
+    // Named colours cannot take an alpha suffix, so paint through a canvas.
+    const cv = document.createElement("canvas").getContext("2d")!;
+    cv.fillStyle = c;
+    const hex = cv.fillStyle as string;
+    if (!hex.startsWith("#")) return c;
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  };
   const e1rm = (w: number, r: number) => w * (1 + r / 30);
   // Local date, not UTC: toISOString() would push an evening Pacific workout
   // onto the next calendar day and group it wrongly on the chart.
@@ -386,7 +402,7 @@ error: Supabase credentials not set</pre>
     const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
     const mins = Math.round((Date.now() - +new Date(current.started_at)) / 60000);
     $("finish-summary").textContent =
-      `${rows.length} ${rows.length === 1 ? "set" : "sets"} · ${vol} vol · ${mins} min`;
+      `${plural(rows.length, "set")} · ${vol} vol · ${mins} min`;
     const d = $("finish-discard");
     d.textContent = rows.length ? `Discard ${rows.length}` : "Discard";
     d.classList.remove("armed");
@@ -622,10 +638,16 @@ error: Supabase credentials not set</pre>
       const rows = done.map((s) => {
         if (editing === s.id) {
           return `<li class="set-row set-editing" data-set="${s.id}">
-            <input type="number" class="ed-weight" value="${s.weight}" step="0.5" min="0" inputmode="decimal" />
-            <input type="number" class="ed-reps" value="${s.reps}" step="1" min="1" inputmode="numeric" />
-            <button type="button" class="btn btn-sm save-set" data-set="${s.id}">Save</button>
-            <button type="button" class="linkish cancel-set">Cancel</button>
+            <div class="ed-grid">
+              <label><span>Weight</span>
+                <input type="number" class="ed-weight" value="${s.weight}" step="0.5" min="0" inputmode="decimal" /></label>
+              <label><span>Reps</span>
+                <input type="number" class="ed-reps" value="${s.reps}" step="1" min="1" inputmode="numeric" /></label>
+            </div>
+            <div class="ed-actions">
+              <button type="button" class="btn btn-sm save-set" data-set="${s.id}">Save set ${s.set_number}</button>
+              <button type="button" class="btn btn-sm cancel-set">Cancel</button>
+            </div>
           </li>`;
         }
         const was = lastTime(exId, s.set_number);
@@ -742,6 +764,34 @@ error: Supabase credentials not set</pre>
   const keyOf = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+  // Tapping a day lists everything done that day, so several sessions on one
+  // date are all reachable instead of only the newest.
+  function showDay(key: string, onDay: Workout[]) {
+    const withSets = onDay.filter((w) => allSets.some((s) => s.workout_id === w.id));
+    if (!withSets.length) { $("cal-day").innerHTML = ""; return; }
+
+    $("cal-day").innerHTML =
+      `<p class="muted cal-day-title">${fmtDayKey(key)}</p>` +
+      withSets
+        .sort((a, b) => +new Date(a.started_at) - +new Date(b.started_at))
+        .map((w) => {
+          const rows = allSets.filter((s) => s.workout_id === w.id);
+          const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+          const time = new Date(w.started_at).toLocaleTimeString(undefined, {
+            hour: "numeric", minute: "2-digit",
+          });
+          return `<button type="button" class="hist-row" data-w="${w.id}">
+            <span class="hist-day">${esc(w.day)}</span>
+            <span class="hist-meta">${time} · ${plural(rows.length, "set")} · ${vol} vol</span>
+          </button>`;
+        })
+        .join("");
+
+    $("cal-day").querySelectorAll<HTMLButtonElement>("button[data-w]").forEach((b) =>
+      b.addEventListener("click", () => openWorkout(b.dataset.w!))
+    );
+  }
+
   function stepMonth(delta: number) {
     if (!calMonth) return;
     const next = new Date(calMonth.getFullYear(), calMonth.getMonth() + delta, 1);
@@ -770,8 +820,13 @@ error: Supabase credentials not set</pre>
       const k = dayKey(st.performed_at);
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
-    const workoutOn = new Map<string, string>();
-    for (const w of workouts) workoutOn.set(dayKey(w.started_at), w.id);
+    // A day can hold several workouts; keep them all, not just the last.
+    const workoutsOn = new Map<string, Workout[]>();
+    for (const w of workouts) {
+      const k = dayKey(w.started_at);
+      if (!workoutsOn.has(k)) workoutsOn.set(k, []);
+      workoutsOn.get(k)!.push(w);
+    }
 
     const first = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -792,27 +847,36 @@ error: Supabase credentials not set</pre>
       const mark = future ? " " : n === 0 ? "░" : n >= 6 ? "█" : "▓";
       if (n > 0) { trained++; sets += n; }
 
-      const wid = workoutOn.get(key);
+      const onDay = (workoutsOn.get(key) ?? []).filter(
+        (w) => allSets.some((x) => x.workout_id === w.id)
+      );
       const cls = ["cal-cell"];
       if (n > 0) cls.push("cal-on");
       if (isToday) cls.push("cal-today");
       if (future) cls.push("cal-future");
 
-      html += wid && n > 0
-        ? `<button type="button" class="${cls.join(" ")}" data-w="${wid}">
-             <span class="cal-d">${d}</span><span class="cal-m">${mark}</span></button>`
-        : `<span class="${cls.join(" ")}">
-             <span class="cal-d">${d}</span><span class="cal-m">${mark}</span></span>`;
+      // Show the set count rather than a bare block: far more to read at a
+      // glance, and it makes a busy month look busy.
+      const body = `<span class="cal-d">${d}</span>` +
+        (n > 0
+          ? `<span class="cal-m">${mark}</span><span class="cal-n">${n}</span>` +
+            (onDay.length > 1 ? `<span class="cal-multi">${onDay.length}×</span>` : "")
+          : `<span class="cal-m">${mark}</span>`);
+
+      html += onDay.length
+        ? `<button type="button" class="${cls.join(" ")}" data-day="${key}">${body}</button>`
+        : `<span class="${cls.join(" ")}">${body}</span>`;
     }
 
     $("cal").innerHTML = html;
     $("cal-note").textContent = trained
-      ? `${trained} ${trained === 1 ? "day" : "days"} · ${sets} sets this month`
+      ? `${plural(trained, "day")} · ${plural(sets, "set")} this month`
       : "Nothing logged this month.";
 
-    $("cal").querySelectorAll<HTMLButtonElement>("button[data-w]").forEach((b) =>
-      b.addEventListener("click", () => openWorkout(b.dataset.w!))
+    $("cal").querySelectorAll<HTMLButtonElement>("button[data-day]").forEach((b) =>
+      b.addEventListener("click", () => showDay(b.dataset.day!, workoutsOn.get(b.dataset.day!) ?? []))
     );
+    $("cal-day").innerHTML = "";
 
     // Disable forward navigation at the current month.
     const atNow = year === today.getFullYear() && month === today.getMonth();
@@ -832,7 +896,7 @@ error: Supabase credentials not set</pre>
       const mins = Math.round((+new Date(w.ended_at!) - +new Date(w.started_at)) / 60000);
       return `<button type="button" class="hist-row" data-w="${w.id}">
         <span class="hist-day">${esc(w.day)}</span>
-        <span class="hist-meta">${fmtDate(w.started_at)} · ${rows.length} sets · ${vol} vol · ${mins} min</span>
+        <span class="hist-meta">${fmtDate(w.started_at)} · ${plural(rows.length, "set")} · ${vol} vol · ${mins} min</span>
       </button>`;
     }).join("");
 
@@ -850,7 +914,7 @@ error: Supabase credentials not set</pre>
 
     $("workout-title").textContent = w.day;
     $("workout-meta").textContent =
-      `${fmtDate(w.started_at)} · ${rows.length} sets · ${vol} vol · ${mins} min`;
+      `${fmtDate(w.started_at)} · ${plural(rows.length, "set")} · ${vol} vol · ${mins} min`;
 
     const byEx = new Map<string, SetRow[]>();
     for (const s of rows) {
@@ -935,8 +999,8 @@ error: Supabase credentials not set</pre>
     overallChart = new Chart(canvas, {
       type: metric === "weekly" ? "bar" : "line",
       data: { labels, datasets: [{
-        label, data: values, borderColor: "#50fa7b",
-        backgroundColor: "rgba(80,250,123,0.25)", tension: 0.25, pointRadius: 3,
+        label, data: values, borderColor: accent(),
+        backgroundColor: accentFill(0.25), tension: 0.25, pointRadius: 3,
         fill: metric !== "weekly",
       }]},
       options: {
@@ -955,7 +1019,7 @@ error: Supabase credentials not set</pre>
       allSets.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0)
     );
     $("overall-msg").textContent =
-      `${days} ${days === 1 ? "session" : "sessions"} · ${allSets.length} sets · ${totalVol} total volume (${unit})` +
+      `${plural(days, "session")} · ${plural(allSets.length, "set")} · ${totalVol} total volume (${unit})` +
       (dropped ? ` · ${dropped} set(s) in the other unit not charted` : "");
   }
 
@@ -1022,8 +1086,8 @@ error: Supabase credentials not set</pre>
     progressChart = new Chart(canvas, {
       type: "line",
       data: { labels, datasets: [{
-        label, data: values, borderColor: "#50fa7b",
-        backgroundColor: "rgba(80,250,123,0.15)", tension: 0.25, pointRadius: 3, fill: true,
+        label, data: values, borderColor: accent(),
+        backgroundColor: accentFill(0.15), tension: 0.25, pointRadius: 3, fill: true,
       }]},
       options: {
         responsive: true, maintainAspectRatio: false,

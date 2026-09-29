@@ -538,10 +538,6 @@ header nav a {
   font-weight: 600;
 }
 
-[data-theme="dark"] .lift .btn-primary {
-  border-color: var(--darkMaincolor);
-}
-
 .lift .btn-wide {
   width: 100%;
   margin-top: 12px;
@@ -553,15 +549,25 @@ header nav a {
   font-size: 0.9rem;
 }
 
+/* Match the site's own link treatment: no underline text-decoration, an
+   accent rule beneath, colour inherited. */
 .lift .linkish {
   font-family: "Roboto Mono", monospace;
   font-size: 0.85rem;
-  color: grey;
+  color: inherit;
   background: none;
   border: none;
-  padding: 6px;
+  border-bottom: 3px solid var(--maincolor);
+  border-radius: 0;
+  padding: 2px 0;
+  margin: 4px 0;
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
+}
+
+.lift .linkish:hover {
+  background-color: var(--hovercolor);
+  color: #fff;
 }
 
 .lift .wide {
@@ -689,12 +695,44 @@ header nav a {
   cursor: pointer;
 }
 
+/* Stacked, because a four-column grid squeezed the weight field to 26px on
+   a phone. Inputs need min-width:0 or grid sizes them by their content. */
 .set-editing {
+  display: block;
+  padding: 10px 0;
+}
+
+.ed-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  align-items: center;
-  padding: 8px 0;
+}
+
+.ed-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ed-grid span {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.72rem;
+  color: grey;
+}
+
+.ed-grid input {
+  min-width: 0;
+}
+
+.ed-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ed-actions .btn {
+  flex: 1;
 }
 
 .hint {
@@ -873,9 +911,6 @@ header nav a {
   box-shadow: inset 0 3px 0 var(--maincolor);
 }
 
-[data-theme="dark"] .tab-on {
-  box-shadow: inset 0 3px 0 var(--darkMaincolor);
-}
 
 #progress-chart {
   position: static;
@@ -913,11 +948,6 @@ header nav a {
   font-weight: 600;
 }
 
-[data-theme="dark"] .lift .btn-danger,
-[data-theme="dark"] .lift .armed {
-  color: var(--darkMaincolor);
-  border-color: var(--darkMaincolor);
-}
 
 /* ---- consistency calendar ---- */
 .consistency {
@@ -954,7 +984,7 @@ header nav a {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: 2px;
 }
 
 .cal-dow {
@@ -966,18 +996,19 @@ header nav a {
 }
 
 .cal-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1px;
-  min-height: 46px;
-  padding: 2px 0;
+  justify-content: flex-start;
+  gap: 0;
+  min-height: 52px;
+  padding: 3px 0 2px;
   font-family: "Roboto Mono", monospace;
   color: inherit;
-  background: none;
+  background: rgba(128, 128, 128, 0.06);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .cal-blank {
@@ -1006,21 +1037,38 @@ header nav a {
   color: inherit;
 }
 
+.cal-on {
+  background: rgba(255, 0, 0, 0.1);
+}
+
 .cal-on .cal-m {
   color: var(--maincolor);
 }
 
-[data-theme="dark"] .cal-on .cal-m {
-  color: var(--darkMaincolor);
+/* Sets logged that day — the number is the density the grid was missing. */
+.cal-n {
+  font-size: 0.68rem;
+  line-height: 1;
+  color: grey;
 }
+
+.cal-multi {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.6rem;
+  color: var(--maincolor);
+}
+
+.cal-day-title {
+  margin: 14px 0 4px;
+}
+
 
 .cal-today {
   border-color: var(--maincolor);
 }
 
-[data-theme="dark"] .cal-today {
-  border-color: var(--darkMaincolor);
-}
 
 .cal-future .cal-d {
   opacity: 0.35;
@@ -1034,9 +1082,6 @@ header nav a {
   border-radius: 6px;
 }
 
-[data-theme="dark"] .finish-panel {
-  border-color: var(--darkMaincolor);
-}
 
 .finish-panel p {
   margin: 0 0 10px;

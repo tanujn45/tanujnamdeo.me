@@ -11,12 +11,16 @@ interface Props {
   title?: string;
   description?: string;
   noindex?: boolean;
+  /** Drops the site footer and the social links: for the private app pages,
+   *  where the portfolio chrome is just noise. */
+  bare?: boolean;
 }
 
 const {
   title = "Tanuj Namdeo",
   description = "Tanuj Namdeo — software engineer at Robinhood. Portfolio, work history and projects.",
   noindex = false,
+  bare = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -62,6 +66,7 @@ const year = new Date().getFullYear();
         <header>
           <div class="main"><a href="/">Tanuj Namdeo</a></div>
           <nav class="social-row">
+            {!bare && (<>
             <a
               href="https://github.com/tanujn45"
               title="GitHub"
@@ -81,6 +86,7 @@ const year = new Date().getFullYear();
               rel="noreferrer"><X /></a
             >
             <span class="sep">|</span>
+            </>)}
             <button id="theme-toggle" type="button" aria-label="Toggle theme">
               <Sun />
               <Moon />
@@ -90,6 +96,7 @@ const year = new Date().getFullYear();
 
         <slot />
 
+        {!bare && (
         <footer>
           <!--
             A flex row: whitespace-only text between flex children generates no
@@ -123,6 +130,7 @@ const year = new Date().getFullYear();
             <span class="footer-copy">⚡️ {year} © Tanuj</span>
           </div>
         </footer>
+        )}
       </div>
     </div>
 
