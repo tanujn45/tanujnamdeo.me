@@ -1439,3 +1439,43 @@ header nav a {
   margin: 1rem 0 0.5rem;
   max-width: 420px;
 }
+
+/* ---- screen header with an action ---- */
+.screen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.screen-head h1 {
+  margin-bottom: 0;
+}
+
+.lift .gear {
+  flex: 0 0 auto;
+  color: grey;
+}
+
+.lift .gear:hover {
+  color: inherit;
+}
+
+/* ---- add an exercise straight into a category ---- */
+.manage-add {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.manage-add .mg-new-name {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  font-size: 16px;
+}
+
+.manage-add .btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+}

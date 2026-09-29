@@ -24,7 +24,17 @@ error: Supabase credentials not set</pre>
 
     <!-- ============ HOME: pick a day ============ -->
     <section id="view-home" class="view" hidden>
-      <h1>Lift</h1>
+      <div class="screen-head">
+        <h1>Lift</h1>
+        <button id="open-manage" class="icon-btn gear" type="button"
+          aria-label="Manage exercises and categories" title="Manage">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.64.73.83H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
       <div class="day-grid">
         {DAYS.map((d) => (
           <button class="btn day-btn" type="button" data-day={d}>{d}</button>
@@ -44,10 +54,6 @@ error: Supabase credentials not set</pre>
         <p id="cal-note" class="muted"></p>
         <div id="cal-day"></div>
       </section>
-
-      <p class="home-links">
-        <button id="open-manage" class="linkish" type="button">Manage exercises &amp; categories</button>
-      </p>
 
       <p class="muted">
         <button id="signout" class="linkish" type="button">Sign out</button>
@@ -742,24 +748,12 @@ error: Supabase credentials not set</pre>
       return `<div class="picker-group"><h3>${d}</h3>${inDay
         .map((e) => {
           const already = sessionExercises.includes(e.id);
-          const used = allSets.some((x) => x.exercise_id === e.id);
-          if (pickerArmed === e.id) {
-            // History is worth keeping, so an exercise that has been used is
-            // archived rather than destroyed; an unused one is simply deleted.
-            return `<div class="picker-row confirm-row">
-              <span class="confirm-q">${used ? "Hide it? History is kept." : "Delete it?"}</span>
-              <button type="button" class="btn btn-sm confirm-yes pk-yes" data-ex="${e.id}">Yes</button>
-              <button type="button" class="btn btn-sm pk-no">No</button>
-            </div>`;
-          }
+          // Deleting lives in Manage now; this sheet only picks.
           return `<div class="picker-row">
             <button type="button" class="picker-item${already ? " picker-item-on" : ""}"
               data-ex="${e.id}"${already ? " disabled" : ""}>
               ${esc(e.name)}${already ? '<span class="tag">in session</span>' : ""}
             </button>
-            <button type="button" class="icon-btn pk-del" data-ex="${e.id}"
-              aria-label="Remove ${esc(e.name)} from your exercises"
-              title="${used ? "Hide from the list" : "Delete"}">×</button>
           </div>`;
         })
         .join("")}</div>`;
@@ -767,12 +761,6 @@ error: Supabase credentials not set</pre>
 
     host.querySelectorAll<HTMLButtonElement>(".picker-item:not([disabled])").forEach((b) =>
       b.addEventListener("click", () => addToSession(b.dataset.ex!)));
-    host.querySelectorAll<HTMLButtonElement>(".pk-del").forEach((b) =>
-      b.addEventListener("click", () => { pickerArmed = b.dataset.ex!; renderPickerList(); }));
-    host.querySelectorAll<HTMLButtonElement>(".pk-no").forEach((b) =>
-      b.addEventListener("click", () => { pickerArmed = null; renderPickerList(); }));
-    host.querySelectorAll<HTMLButtonElement>(".pk-yes").forEach((b) =>
-      b.addEventListener("click", () => deleteExercise(b.dataset.ex!)));
   }
 
   async function deleteExercise(exId: string) {
@@ -1396,10 +1384,8 @@ error: Supabase credentials not set</pre>
     // --- exercises, grouped by category ---
     const live = exercises.filter((e) => !e.archived);
     const archived = exercises.filter((e) => e.archived);
-    let html = dayNames().map((name) => {
-      const inDay = live.filter((e) => e.day === name);
-      if (!inDay.length) return "";
-      return `<h3 class="manage-group">${esc(name)}</h3>` + inDay.map((e) => {
+    const exerciseRow = (e: Exercise) => {
+      {
         const used = allSets.some((x) => x.exercise_id === e.id);
         if (manageArmed === `ex:${e.id}`) {
           return `<div class="manage-row confirm-row">
@@ -1415,7 +1401,21 @@ error: Supabase credentials not set</pre>
           </select>
           <button type="button" class="icon-btn mg-ex-del" data-id="${e.id}" aria-label="Remove ${esc(e.name)}">×</button>
         </div>`;
-      }).join("");
+      }
+    };
+
+    let html = "";
+
+    // Every category gets its own add box, including empty ones.
+    html = dayNames().map((name) => {
+      const inDay = live.filter((e) => e.day === name);
+      const group = inDay.length
+        ? `<h3 class="manage-group">${esc(name)}</h3>` + inDay.map((e) => exerciseRow(e)).join("")
+        : `<h3 class="manage-group">${esc(name)}</h3>`;
+      return group + `<form class="manage-add" data-day="${esc(name)}">
+          <input type="text" class="mg-new-name" placeholder="Add to ${esc(name)}…" />
+          <button type="submit" class="btn btn-sm">Add</button>
+        </form>`;
     }).join("");
 
     if (archived.length) {
@@ -1435,12 +1435,42 @@ error: Supabase credentials not set</pre>
     on(".mg-day-del", (b) => { manageArmed = `day:${b.dataset.id}`; renderManage(); });
     on(".mg-ex-del", (b) => { manageArmed = `ex:${b.dataset.id}`; renderManage(); });
     on(".mg-cancel", () => { manageArmed = null; renderManage(); });
-    on(".mg-day-yes", (b) => deleteDay(b.dataset.id!));
-    on(".mg-ex-yes", (b) => { manageArmed = null; deleteExercise(b.dataset.id!); renderManage(); });
-    on(".mg-restore", (b) => restoreExercise(b.dataset.id!));
+    on(".mg-day-yes", async (b) => { await deleteDay(b.dataset.id!); });
+    // Await it: re-rendering straight away redrew the row still in place.
+    on(".mg-ex-yes", async (b) => {
+      manageArmed = null;
+      await deleteExercise(b.dataset.id!);
+      mSay($("picker-msg").textContent || "");
+      renderManage();
+    });
+    on(".mg-restore", async (b) => { await restoreExercise(b.dataset.id!); });
 
     $("view-manage").querySelectorAll<HTMLSelectElement>(".mg-move").forEach((sel) =>
       sel.addEventListener("change", () => moveExercise(sel.dataset.id!, sel.value)));
+
+    $("view-manage").querySelectorAll<HTMLFormElement>(".manage-add").forEach((f) =>
+      f.addEventListener("submit", (ev) => {
+        ev.preventDefault();
+        const input = f.querySelector<HTMLInputElement>(".mg-new-name")!;
+        addExerciseToDay(input.value.trim(), f.dataset.day!, input);
+      }));
+  }
+
+  async function addExerciseToDay(name: string, day: string, input: HTMLInputElement) {
+    if (!name) return;
+    const { data, error } = await withTimeout(
+      supabase.from("exercises").insert({ name, day, user_id: userId })
+        .select("id,name,day,archived").single()
+    );
+    if (error) {
+      mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
+      return;
+    }
+    input.value = "";
+    exercises.push(data as Exercise);
+    exercises.sort((a, b) => a.name.localeCompare(b.name));
+    mSay(`Added ${name} to ${day}.`);
+    renderManage();
   }
 
   async function onNewDay(e: Event) {
