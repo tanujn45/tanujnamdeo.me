@@ -130,6 +130,7 @@ error: Supabase credentials not set</pre>
           <strong>Add exercise</strong>
           <button id="picker-close" class="linkish" type="button">Close</button>
         </div>
+        <p id="picker-msg" class="picker-msg" role="status"></p>
         <div id="picker-list" class="picker-list"></div>
         <form id="new-exercise-form" class="stack sheet-new">
           <input type="text" id="new-ex-name" placeholder="New exercise name" />
@@ -138,7 +139,6 @@ error: Supabase credentials not set</pre>
           </select>
           <button type="submit" class="btn btn-primary">Create &amp; add</button>
         </form>
-        <p id="picker-msg" class="description" role="status"></p>
       </div>
     </div>
 
@@ -183,6 +183,7 @@ error: Supabase credentials not set</pre>
   let discardArmed = false;
   let calMonth: Date | null = null;   // first day of the month on screen
   let removeArmed: string | null = null;
+  let pickerArmed: string | null = null;
   // Keeps the last removal around so it can be put back verbatim.
   let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
   let undoTimer: number | null = null;
@@ -509,6 +510,8 @@ error: Supabase credentials not set</pre>
   // Shows the WHOLE library grouped by day. Things already in the session are
   // shown greyed out rather than hidden, which is what made this confusing.
   function openPicker() {
+    pickerArmed = null;
+    $("picker-msg").textContent = "";
     show("picker");
     ($("new-ex-day") as HTMLSelectElement).value = current?.day ?? "Chest";
     renderPickerList();
@@ -527,30 +530,105 @@ error: Supabase credentials not set</pre>
       return `<div class="picker-group"><h3>${d}</h3>${inDay
         .map((e) => {
           const already = sessionExercises.includes(e.id);
-          return `<button type="button" class="picker-item${already ? " picker-item-on" : ""}"
-            data-ex="${e.id}"${already ? " disabled" : ""}>
-            ${esc(e.name)}${already ? "<span class=\"tag\">in session</span>" : ""}
-          </button>`;
+          const used = allSets.some((x) => x.exercise_id === e.id);
+          if (pickerArmed === e.id) {
+            // History is worth keeping, so an exercise that has been used is
+            // archived rather than destroyed; an unused one is simply deleted.
+            return `<div class="picker-row confirm-row">
+              <span class="confirm-q">${used ? "Hide it? History is kept." : "Delete it?"}</span>
+              <button type="button" class="btn btn-sm confirm-yes pk-yes" data-ex="${e.id}">Yes</button>
+              <button type="button" class="btn btn-sm pk-no">No</button>
+            </div>`;
+          }
+          return `<div class="picker-row">
+            <button type="button" class="picker-item${already ? " picker-item-on" : ""}"
+              data-ex="${e.id}"${already ? " disabled" : ""}>
+              ${esc(e.name)}${already ? '<span class="tag">in session</span>' : ""}
+            </button>
+            <button type="button" class="icon-btn pk-del" data-ex="${e.id}"
+              aria-label="Remove ${esc(e.name)} from your exercises"
+              title="${used ? "Hide from the list" : "Delete"}">×</button>
+          </div>`;
         })
         .join("")}</div>`;
     }).join("");
 
     host.querySelectorAll<HTMLButtonElement>(".picker-item:not([disabled])").forEach((b) =>
-      b.addEventListener("click", () => addToSession(b.dataset.ex!))
-    );
+      b.addEventListener("click", () => addToSession(b.dataset.ex!)));
+    host.querySelectorAll<HTMLButtonElement>(".pk-del").forEach((b) =>
+      b.addEventListener("click", () => { pickerArmed = b.dataset.ex!; renderPickerList(); }));
+    host.querySelectorAll<HTMLButtonElement>(".pk-no").forEach((b) =>
+      b.addEventListener("click", () => { pickerArmed = null; renderPickerList(); }));
+    host.querySelectorAll<HTMLButtonElement>(".pk-yes").forEach((b) =>
+      b.addEventListener("click", () => deleteExercise(b.dataset.ex!)));
+  }
+
+  async function deleteExercise(exId: string) {
+    pickerArmed = null;
+    try { await doDeleteExercise(exId); }
+    catch (err) {
+      $("picker-msg").textContent = `Failed: ${(err as Error).message}`;
+      renderPickerList();
+    }
+  }
+
+  async function doDeleteExercise(exId: string) {
+    const used = allSets.some((x) => x.exercise_id === exId);
+    const name = nameOf(exId);
+
+    if (used) {
+      // Archive: it disappears from the picker but every past set survives.
+      const { error } = await withTimeout(
+        supabase.from("exercises").update({ archived: true }).eq("id", exId)
+      );
+      if (error) { $("picker-msg").textContent = `Could not hide: ${error.message}`; return; }
+      const e = exercises.find((x) => x.id === exId);
+      if (e) e.archived = true;
+    } else {
+      const { error } = await withTimeout(
+        supabase.from("exercises").delete().eq("id", exId)
+      );
+      if (error) { $("picker-msg").textContent = `Could not delete: ${error.message}`; return; }
+      exercises = exercises.filter((x) => x.id !== exId);
+    }
+
+    // It may be sitting in the open session; take it out of there too.
+    if (sessionExercises.includes(exId) && current) {
+      await supabase.from("workout_exercises").delete()
+        .eq("workout_id", current.id).eq("exercise_id", exId);
+      sessionExercises = sessionExercises.filter((i) => i !== exId);
+    }
+
+    $("picker-msg").textContent = used ? `${name} hidden.` : `${name} deleted.`;
+    renderPickerList();
+    renderSession();
   }
 
   async function addToSession(id: string) {
     if (!current) return;
-    const { error } = await withTimeout(
-      supabase.from("workout_exercises").insert({
-        user_id: userId, workout_id: current.id, exercise_id: id,
-        position: sessionExercises.length,
-      })
-    );
-    if (error) { $("picker-msg").textContent = `Could not add: ${error.message}`; return; }
+    if (sessionExercises.includes(id)) return;
+
+    let error: any;
+    try {
+      ({ error } = await withTimeout(
+        supabase.from("workout_exercises").insert({
+          user_id: userId, workout_id: current.id, exercise_id: id,
+          position: sessionExercises.length,
+        })
+      ));
+    } catch (err) {
+      // A rejected promise used to leave the sheet doing nothing at all.
+      $("picker-msg").textContent = `Could not add: ${(err as Error).message}`;
+      return;
+    }
+    // A leftover row means it is already in the session, which is the desired
+    // end state, so carry on rather than calling it a failure.
+    if (error && !String(error.message).includes("duplicate")) {
+      $("picker-msg").textContent = `Could not add: ${error.message}`;
+      return;
+    }
     sessionExercises.push(id);
-    $("picker-msg").textContent = "";
+    $("picker-msg").textContent = `Added ${nameOf(id)}.`;
     renderPickerList();
     renderSession();
   }
@@ -583,22 +661,16 @@ error: Supabase credentials not set</pre>
     await addToSession(data.id);
   }
 
-  async function removeExercise(exId: string) {
+  // Arming shows an explicit Yes / No rather than relying on a second tap in
+  // the same place, which gave no way to say no.
+  function armRemove(exId: string) {
+    removeArmed = exId;
+    renderSession();
+  }
+
+  async function doRemoveExercise(exId: string) {
     if (!current) return;
     const logged = allSets.filter((x) => x.workout_id === current!.id && x.exercise_id === exId);
-
-    // Always two taps, including when nothing is logged: a single tap used to
-    // remove an empty exercise outright, which is easy to do by accident.
-    if (removeArmed !== exId) {
-      removeArmed = exId;
-      renderSession();
-      setTimeout(() => {
-        if (removeArmed !== exId) return;
-        removeArmed = null;
-        renderSession();
-      }, 4000);
-      return;
-    }
     removeArmed = null;
 
     const position = Math.max(0, sessionExercises.indexOf(exId));
@@ -745,11 +817,13 @@ error: Supabase credentials not set</pre>
       return `<section class="ex-card" data-ex="${exId}">
         <header class="ex-head">
           <h2>${esc(ex.name)}</h2>
-          <button type="button" class="linkish remove-ex${removeArmed === exId ? " armed" : ""}" data-ex="${exId}">${
-            removeArmed === exId
-              ? (done.length ? `remove and delete ${plural(done.length, "set")}?` : "remove?")
-              : "remove"
-          }</button>
+          ${removeArmed === exId
+            ? `<span class="confirm-row">
+                 <span class="confirm-q">${done.length ? `Delete ${plural(done.length, "set")}?` : "Remove?"}</span>
+                 <button type="button" class="btn btn-sm confirm-yes" data-ex="${exId}">Yes</button>
+                 <button type="button" class="btn btn-sm confirm-no">No</button>
+               </span>`
+            : `<button type="button" class="linkish remove-ex" data-ex="${exId}">remove</button>`}
         </header>
         <ul class="set-list">${rows}</ul>
         <p class="hint">${prev
@@ -775,7 +849,11 @@ error: Supabase credentials not set</pre>
     host.querySelectorAll<HTMLFormElement>(".log-form").forEach((f) =>
       f.addEventListener("submit", onLogSet));
     host.querySelectorAll<HTMLButtonElement>(".remove-ex").forEach((b) =>
-      b.addEventListener("click", () => removeExercise(b.dataset.ex!)));
+      b.addEventListener("click", () => armRemove(b.dataset.ex!)));
+    host.querySelectorAll<HTMLButtonElement>(".confirm-yes").forEach((b) =>
+      b.addEventListener("click", () => doRemoveExercise(b.dataset.ex!)));
+    host.querySelectorAll<HTMLButtonElement>(".confirm-no").forEach((b) =>
+      b.addEventListener("click", () => { removeArmed = null; renderSession(); }));
     host.querySelectorAll<HTMLButtonElement>(".del-set").forEach((b) =>
       b.addEventListener("click", () => deleteSet(b.dataset.set!)));
     host.querySelectorAll<HTMLButtonElement>(".edit-set").forEach((b) =>

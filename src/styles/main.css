@@ -1148,3 +1148,70 @@ header nav a {
 .undo-bar .btn {
   flex: 0 0 auto;
 }
+
+/* ---- inline remove confirmation ---- */
+.confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.confirm-q {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--maincolor);
+}
+
+.confirm-row .btn {
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: 0.85rem;
+}
+
+.confirm-row .confirm-yes {
+  border-color: var(--maincolor);
+  color: var(--maincolor);
+}
+
+/* ---- picker rows ---- */
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.picker-row .picker-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.picker-row.confirm-row {
+  min-height: 48px;
+  padding: 4px 2px;
+}
+
+.picker-row .pk-del {
+  flex: 0 0 auto;
+}
+
+/* Sheet status sits at the top: at the bottom it fell below the fold on a
+   phone, so a failed add looked like nothing happening. */
+.picker-msg {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--maincolor);
+  margin: 0 0 8px;
+  min-height: 1em;
+}
+
+/* Sheet status at the top: at the bottom it fell below the fold on a phone,
+   so a failed add looked like nothing happening at all. */
+.picker-msg {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--maincolor);
+  margin: 0 0 8px;
+  min-height: 1em;
+}
