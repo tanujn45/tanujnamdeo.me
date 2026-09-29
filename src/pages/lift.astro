@@ -108,6 +108,9 @@ error: Supabase credentials not set</pre>
       <h2>By exercise</h2>
       <div id="sum-exercises"></div>
       <button id="sum-done" class="btn btn-primary btn-wide" type="button">Done</button>
+      <div id="sum-danger" class="sum-danger">
+        <button id="sum-del" class="linkish" type="button">Delete this workout</button>
+      </div>
     </section>
 
     <!-- ============ MANAGE ============ -->
@@ -267,6 +270,8 @@ error: Supabase credentials not set</pre>
   let overallChart: Chart | null = null;
   let sumChart: Chart | null = null;
   let summaryOrigin: "home" | "history" = "home";
+  let summaryId: string | null = null;
+  let sumDelArmed = false;
 
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
     return Promise.race([
@@ -415,6 +420,7 @@ error: Supabase credentials not set</pre>
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("sum-done").addEventListener("click", () => goto(summaryOrigin));
+    $("sum-del").addEventListener("click", onDeleteWorkout);
     $("undo-btn").addEventListener("click", undoRemove);
     // The pill always opens the menu. It used to cancel outright while
     // running, which made Stop unreachable and let a mis-tap kill a rest.
@@ -666,6 +672,8 @@ error: Supabase credentials not set</pre>
     const w = workouts.find((x) => x.id === id);
     if (!w) { goto("home"); return; }
     summaryOrigin = origin;
+    summaryId = id;
+    resetSumDelete();
     $("sum-done").textContent = origin === "history" ? "← Back to history" : "Done";
 
     const rows = allSets.filter((x) => x.workout_id === id);
@@ -718,6 +726,45 @@ error: Supabase credentials not set</pre>
     renderSummaryChart(w.day, unit, id);
     renderSummaryExercises(rows, prevRows, unit, prev);
     goto("summary");
+  }
+
+  function resetSumDelete() {
+    sumDelArmed = false;
+    const b = $("sum-del");
+    b.textContent = "Delete this workout";
+    b.classList.remove("armed");
+  }
+
+  // Deleting takes the sets with it, so it asks first.
+  function onDeleteWorkout() {
+    if (!summaryId) return;
+    const b = $("sum-del");
+    if (!sumDelArmed) {
+      sumDelArmed = true;
+      const n = allSets.filter((x) => x.workout_id === summaryId).length;
+      b.textContent = n
+        ? `Delete it and its ${plural(n, "set")}? Tap again`
+        : "Delete it? Tap again";
+      b.classList.add("armed");
+      setTimeout(() => { if (sumDelArmed) resetSumDelete(); }, 4000);
+      return;
+    }
+    deleteWorkout(summaryId);
+  }
+
+  async function deleteWorkout(id: string) {
+    resetSumDelete();
+    // sets and workout_exercises cascade from the workout row.
+    const { error } = await withTimeout(
+      supabase.from("workouts").delete().eq("id", id)
+    );
+    if (error) { $("sum-verdict").textContent = `Could not delete: ${error.message}`; return; }
+    workouts = workouts.filter((w) => w.id !== id);
+    allSets = allSets.filter((x) => x.workout_id !== id);
+    if (current?.id === id) { current = null; stopTimer(); }
+    summaryId = null;
+    sumChart?.destroy(); sumChart = null;
+    goto(summaryOrigin === "history" ? "history" : "home");
   }
 
   function renderSummaryChart(day: string, unit: string, currentId: string) {

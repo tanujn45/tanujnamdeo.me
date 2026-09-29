@@ -1686,3 +1686,21 @@ header nav a {
 #auth-who {
   margin: 0;
 }
+
+/* ---- deleting a past workout ---- */
+.sum-danger {
+  margin: 1.2rem 0 0;
+  text-align: center;
+}
+
+.lift .sum-danger .linkish {
+  font-size: 0.8rem;
+  color: grey;
+  border-bottom-color: rgba(128, 128, 128, 0.5);
+}
+
+.lift .sum-danger .armed {
+  color: var(--maincolor);
+  border-bottom-color: var(--maincolor);
+  font-weight: 600;
+}
