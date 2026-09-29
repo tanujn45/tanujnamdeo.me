@@ -924,20 +924,104 @@ header nav a {
   margin-top: 2rem;
 }
 
-.consistency h2 {
-  margin-bottom: 0.5rem;
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+  margin-bottom: 10px;
 }
 
-.cal {
-  font-family: "Roboto Mono", monospace;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  letter-spacing: 0;
-  margin: 0 0 8px;
-  padding: 0;
-  overflow-x: auto;
-  background: none;
-  border: none;
-  white-space: pre;
+.cal-nav {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.1rem;
   color: inherit;
+  background: none;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cal-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cal-dow,
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.cal-dow {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.75rem;
+  color: grey;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 46px;
+  padding: 2px 0;
+  font-family: "Roboto Mono", monospace;
+  color: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.cal-blank {
+  min-height: 0;
+  border: none;
+}
+
+.cal-d {
+  font-size: 0.72rem;
+  color: grey;
+  line-height: 1;
+}
+
+/* The block character carries the intensity, same as the old tracker. */
+.cal-m {
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.cal-on {
+  cursor: pointer;
+  border-color: rgba(128, 128, 128, 0.35);
+}
+
+.cal-on .cal-d {
+  color: inherit;
+}
+
+.cal-on .cal-m {
+  color: var(--maincolor);
+}
+
+[data-theme="dark"] .cal-on .cal-m {
+  color: var(--darkMaincolor);
+}
+
+.cal-today {
+  border-color: var(--maincolor);
+}
+
+[data-theme="dark"] .cal-today {
+  border-color: var(--darkMaincolor);
+}
+
+.cal-future .cal-d {
+  opacity: 0.35;
 }

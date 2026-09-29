@@ -31,8 +31,16 @@ error: Supabase credentials not set</pre>
         ))}
       </div>
       <section class="consistency">
-        <h2>Consistency</h2>
-        <pre id="cal" class="cal"></pre>
+        <div class="cal-head">
+          <button id="cal-prev" class="cal-nav" type="button" aria-label="Previous month">←</button>
+          <strong id="cal-title">—</strong>
+          <button id="cal-next" class="cal-nav" type="button" aria-label="Next month">→</button>
+        </div>
+        <div class="cal-dow">
+          <span>M</span><span>T</span><span>W</span><span>T</span>
+          <span>F</span><span>S</span><span>S</span>
+        </div>
+        <div id="cal" class="cal-grid"></div>
         <p id="cal-note" class="muted"></p>
       </section>
 
@@ -147,6 +155,7 @@ error: Supabase credentials not set</pre>
   let timerHandle: number | null = null;
   let editing: string | null = null;      // set id being edited
   let finishArmed = false;
+  let calMonth: Date | null = null;   // first day of the month on screen
   let removeArmed: string | null = null;
   let progressChart: Chart | null = null;
 
@@ -264,6 +273,8 @@ error: Supabase credentials not set</pre>
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
+    $("cal-prev").addEventListener("click", () => stepMonth(-1));
+    $("cal-next").addEventListener("click", () => stepMonth(1));
     $("progress-exercise").addEventListener("change", renderProgress);
     $("progress-metric").addEventListener("change", renderProgress);
   }
@@ -647,50 +658,81 @@ error: Supabase credentials not set</pre>
   const keyOf = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+  function stepMonth(delta: number) {
+    if (!calMonth) return;
+    const next = new Date(calMonth.getFullYear(), calMonth.getMonth() + delta, 1);
+    const thisMonth = new Date();
+    // Nothing to see in the future.
+    if (next > new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)) return;
+    calMonth = next;
+    renderCalendar();
+  }
+
   function renderCalendar() {
-    const WEEKS = 12;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!calMonth) calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+
+    $("cal-title").textContent = calMonth.toLocaleDateString(undefined, {
+      month: "long", year: "numeric",
+    });
+
+    // Sets per day, and the workout to open when a day is tapped.
     const counts = new Map<string, number>();
     for (const st of allSets) {
       const k = dayKey(st.performed_at);
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
+    const workoutOn = new Map<string, string>();
+    for (const w of workouts) workoutOn.set(dayKey(w.started_at), w.id);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Weeks run Monday-first, so shift Sunday (0) to the end.
-    const dow = (today.getDay() + 6) % 7;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - dow);
-    const start = new Date(monday);
-    start.setDate(monday.getDate() - (WEEKS - 1) * 7);
+    const first = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Monday-first, so Sunday (0) becomes 6.
+    const lead = (first.getDay() + 6) % 7;
 
-    const labels = ["M", "T", "W", "T", "F", "S", "S"];
-    const lines: string[] = [];
+    let html = "";
+    for (let i = 0; i < lead; i++) html += '<span class="cal-cell cal-blank"></span>';
+
     let trained = 0;
-    let last28 = 0;
-    let thisWeek = 0;
+    let sets = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const key = keyOf(date);
+      const n = counts.get(key) ?? 0;
+      const future = date > today;
+      const isToday = keyOf(today) === key;
+      const mark = future ? " " : n === 0 ? "░" : n >= 6 ? "█" : "▓";
+      if (n > 0) { trained++; sets += n; }
 
-    for (let r = 0; r < 7; r++) {
-      let line = labels[r] + " ";
-      for (let c = 0; c < WEEKS; c++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + c * 7 + r);
-        if (d > today) { line += "  "; continue; }
-        const n = counts.get(keyOf(d)) ?? 0;
-        line += (n === 0 ? "░" : n >= 6 ? "█" : "▓") + " ";
-        if (n > 0) {
-          trained++;
-          if (c === WEEKS - 1) thisWeek++;
-          if ((today.getTime() - d.getTime()) / 86400000 < 28) last28++;
-        }
-      }
-      lines.push(line.trimEnd());
+      const wid = workoutOn.get(key);
+      const cls = ["cal-cell"];
+      if (n > 0) cls.push("cal-on");
+      if (isToday) cls.push("cal-today");
+      if (future) cls.push("cal-future");
+
+      html += wid && n > 0
+        ? `<button type="button" class="${cls.join(" ")}" data-w="${wid}">
+             <span class="cal-d">${d}</span><span class="cal-m">${mark}</span></button>`
+        : `<span class="${cls.join(" ")}">
+             <span class="cal-d">${d}</span><span class="cal-m">${mark}</span></span>`;
     }
 
-    $("cal").textContent = lines.join("\n");
+    $("cal").innerHTML = html;
     $("cal-note").textContent = trained
-      ? `${trained} ${trained === 1 ? "day" : "days"} in 12 weeks · ${last28} in the last 4 · ${thisWeek} this week`
-      : "No sessions logged yet.";
+      ? `${trained} ${trained === 1 ? "day" : "days"} · ${sets} sets this month`
+      : "Nothing logged this month.";
+
+    $("cal").querySelectorAll<HTMLButtonElement>("button[data-w]").forEach((b) =>
+      b.addEventListener("click", () => openWorkout(b.dataset.w!))
+    );
+
+    // Disable forward navigation at the current month.
+    const atNow = year === today.getFullYear() && month === today.getMonth();
+    (<HTMLButtonElement>$("cal-next")).disabled = atNow;
   }
 
   // -------------------------------------------------------------- history
