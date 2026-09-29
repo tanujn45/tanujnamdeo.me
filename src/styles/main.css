@@ -1577,3 +1577,52 @@ header nav a {
   padding: 0;
   accent-color: var(--maincolor);
 }
+
+/* ---- existing-exercise suggestions while typing ---- */
+.mg-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 6px;
+}
+
+.mg-suggest:empty {
+  margin: 0;
+}
+
+.mg-suggest-label {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.7rem;
+  color: grey;
+}
+
+.mg-suggest-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.82rem;
+  color: inherit;
+  background: transparent;
+  border: 1px dashed var(--maincolor);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mg-suggest-in {
+  font-size: 0.66rem;
+  color: grey;
+}
+
+.mg-dupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  margin: 4px 0 8px;
+  border: 1px solid var(--maincolor);
+  border-radius: 6px;
+}

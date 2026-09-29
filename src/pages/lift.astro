@@ -238,6 +238,7 @@ error: Supabase credentials not set</pre>
   let mgOpen = new Set<string>();
   let mgEditEx: string | null = null;
   let mgEditDay: string | null = null;
+  let mgConfirmDupe: { typed: string; existingId: string; day: string } | null = null;
   // Keeps the last removal around so it can be put back verbatim.
   let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
   let undoTimer: number | null = null;
@@ -471,6 +472,7 @@ error: Supabase credentials not set</pre>
     } else if (view === "manage") {
       mgEditEx = null;
       mgEditDay = null;
+      mgConfirmDupe = null;
       mSay("");
       show("view-manage");
       renderManage();
@@ -1357,6 +1359,52 @@ error: Supabase credentials not set</pre>
   }
 
   // ------------------------------------------------------------ categories
+  // Typos make near-duplicates that a unique index cannot catch: "Dumbbell
+  // curls" and "Dumbell curls" are different strings. Normalise, then measure.
+  const normalise = (t: string) =>
+    t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  function editDistance(a: string, b: string): number {
+    if (a === b) return 0;
+    const m = a.length, n = b.length;
+    if (!m || !n) return m || n;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(
+          prev[j] + 1,
+          cur[j - 1] + 1,
+          prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  // Close enough to be worth querying, scaled so short names are stricter.
+  function looksLike(a: string, b: string): boolean {
+    const x = normalise(a), y = normalise(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    if (x.includes(y) || y.includes(x)) return true;
+    const allowed = Math.max(1, Math.floor(Math.max(x.length, y.length) / 6));
+    return editDistance(x, y) <= allowed;
+  }
+
+  function suggestFor(text: string, day: string): Exercise[] {
+    const q = normalise(text);
+    if (q.length < 2) return [];
+    return exercises
+      .filter((e) => !e.archived && !inCategory(e, day))
+      .filter((e) => {
+        const n = normalise(e.name);
+        return n.includes(q) || q.includes(n) || looksLike(e.name, text);
+      })
+      .slice(0, 5);
+  }
+
   const inCategory = (e: Exercise, day: string) =>
     (exDays.get(e.id) ?? new Set([e.day])).has(day);
 
@@ -1448,9 +1496,20 @@ error: Supabase credentials not set</pre>
         <div class="mg-body">
           ${rows || '<p class="muted mg-empty">Nothing here yet.</p>'}
           <form class="manage-add" data-day="${esc(name)}">
-            <input type="text" class="mg-new-name" placeholder="Add an exercise…" />
+            <input type="text" class="mg-new-name" placeholder="Add an exercise…"
+              autocomplete="off" autocapitalize="words" />
             <button type="submit" class="btn btn-sm">Add</button>
           </form>
+          <div class="mg-suggest" data-for="${esc(name)}"></div>
+          ${mgConfirmDupe && mgConfirmDupe.day === name ? `<div class="mg-dupe">
+            <span class="mg-why">Did you mean <strong>${esc(nameOf(mgConfirmDupe.existingId))}</strong>?
+              Adding "${esc(mgConfirmDupe.typed)}" would make a second one.</span>
+            <div class="mg-edit-actions">
+              <button type="button" class="btn btn-sm dupe-use">Use existing</button>
+              <button type="button" class="btn btn-sm dupe-new">Add anyway</button>
+              <button type="button" class="btn btn-sm dupe-cancel">Cancel</button>
+            </div>
+          </div>` : ""}
         </div>
       </div>`;
     }).join("");
@@ -1503,13 +1562,47 @@ error: Supabase credentials not set</pre>
       renderManage();
     });
     on(".mg-restore", async (b) => { await restoreExercise(b.dataset.id!); });
+    on(".dupe-use", async () => {
+      const d = mgConfirmDupe!; mgConfirmDupe = null;
+      await addExistingToDay(d.existingId, d.day);
+    });
+    on(".dupe-new", async () => {
+      const d = mgConfirmDupe!; mgConfirmDupe = null;
+      const fake = document.createElement("input");
+      await addExerciseToDay(d.typed, d.day, fake, true);
+    });
+    on(".dupe-cancel", () => { mgConfirmDupe = null; mSay(""); renderManage(); });
 
-    host.querySelectorAll<HTMLFormElement>(".manage-add[data-day]").forEach((f) =>
+    host.querySelectorAll<HTMLFormElement>(".manage-add[data-day]").forEach((f) => {
+      const day = f.dataset.day!;
+      const input = f.querySelector<HTMLInputElement>(".mg-new-name")!;
+      const strip = host.querySelector<HTMLElement>(`.mg-suggest[data-for="${CSS.escape(day)}"]`)!;
+
+      // Offer what already exists, so the answer to "I have this elsewhere"
+      // is one tap rather than retyping it slightly differently.
+      const refresh = () => {
+        const hits = suggestFor(input.value, day);
+        strip.innerHTML = hits.length
+          ? `<span class="mg-suggest-label">Already have:</span>` + hits.map((e) =>
+              `<button type="button" class="mg-suggest-item" data-id="${e.id}" data-day="${esc(day)}">
+                 ${esc(e.name)}<span class="mg-suggest-in">${esc(categoriesOf(e).join(", "))}</span>
+               </button>`).join("")
+          : "";
+        strip.querySelectorAll<HTMLButtonElement>(".mg-suggest-item").forEach((b) =>
+          b.addEventListener("click", async () => {
+            input.value = "";
+            strip.innerHTML = "";
+            await addExistingToDay(b.dataset.id!, b.dataset.day!);
+          }));
+      };
+
+      input.addEventListener("input", refresh);
       f.addEventListener("submit", (ev) => {
         ev.preventDefault();
-        const input = f.querySelector<HTMLInputElement>(".mg-new-name")!;
-        addExerciseToDay(input.value.trim(), f.dataset.day!, input);
-      }));
+        strip.innerHTML = "";
+        addExerciseToDay(input.value.trim(), day, input);
+      });
+    });
   }
 
   async function saveExercise(exId: string, name: string, picked: string[]) {
@@ -1585,8 +1678,32 @@ error: Supabase credentials not set</pre>
     await deleteDay(row.id);
   }
 
-  async function addExerciseToDay(name: string, day: string, input: HTMLInputElement) {
+  async function addExistingToDay(exId: string, day: string) {
+    const { error } = await withTimeout(
+      supabase.from("exercise_days").insert({ user_id: userId, exercise_id: exId, day })
+    );
+    if (error && !String(error.message).includes("duplicate")) {
+      mSay(`Could not add: ${error.message}`);
+      return;
+    }
+    (exDays.get(exId) ?? exDays.set(exId, new Set()).get(exId)!).add(day);
+    mSay(`${nameOf(exId)} added to ${day}.`);
+    renderDayButtons();
+    renderManage();
+  }
+
+  async function addExerciseToDay(name: string, day: string, input: HTMLInputElement, force = false) {
     if (!name) return;
+
+    // Guard against a typo becoming a second exercise.
+    if (!force) {
+      const near = exercises.find((e) => !e.archived && looksLike(e.name, name));
+      if (near && normalise(near.name) !== normalise(name)) {
+        mgConfirmDupe = { typed: name, existingId: near.id, day };
+        renderManage();
+        return;
+      }
+    }
     const { data, error } = await withTimeout(
       supabase.from("exercises").insert({ name, day, user_id: userId })
         .select("id,name,day,archived").single()
