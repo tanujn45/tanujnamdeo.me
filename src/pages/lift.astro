@@ -4,83 +4,110 @@ import Layout from "../layouts/Layout.astro";
 const DAYS = ["Legs", "Shoulders", "Chest", "Back", "Arms"];
 ---
 
-<Layout title="Lift — Tanuj Namdeo" description="Private workout log." noindex>
+<Layout title="Lift" description="Private workout log." noindex>
   <main class="lift">
     <section id="unconfigured" hidden>
       <h1>Lift</h1>
       <pre class="terminal"><span class="prompt">$</span> lift
-error: Supabase credentials not set
-set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
+error: Supabase credentials not set</pre>
     </section>
 
-    <!-- Sign in -->
     <section id="auth" hidden>
       <h1>Lift</h1>
-      <h2>Sign in</h2>
       <form id="auth-form" class="stack">
-        <input
-          type="password"
-          id="password"
-          placeholder="Password"
-          required
-          autocomplete="current-password"
-        />
+        <input type="password" id="password" placeholder="Password" required
+          autocomplete="current-password" />
         <button type="submit" class="btn btn-primary">Unlock</button>
       </form>
       <p id="auth-msg" class="description" role="status"></p>
     </section>
 
-    <!-- Pick a day -->
-    <section id="pick-day" hidden>
+    <!-- ============ HOME: pick a day ============ -->
+    <section id="view-home" class="view" hidden>
       <h1>Lift</h1>
-      <p class="description">What are you training?</p>
       <div class="day-grid">
-        {
-          DAYS.map((d) => (
-            <button class="btn day-btn" type="button" data-day={d}>
-              {d}
-            </button>
-          ))
-        }
+        {DAYS.map((d) => (
+          <button class="btn day-btn" type="button" data-day={d}>{d}</button>
+        ))}
       </div>
-
-      <h2>Recent</h2>
-      <div id="recent"></div>
-
-      <p class="lift-foot">
-        <button id="signout" class="btn btn-quiet" type="button">Sign out</button>
+      <p class="muted">
+        <button id="signout" class="linkish" type="button">Sign out</button>
       </p>
     </section>
 
-    <!-- Active session -->
-    <section id="session" hidden>
-      <div class="session-bar">
-        <h1 id="session-day">Day</h1>
-        <div class="session-meta">
+    <!-- ============ SESSION ============ -->
+    <section id="view-session" class="view" hidden>
+      <div class="session-head">
+        <div>
+          <h1 id="session-day">Day</h1>
           <time id="timer">0:00</time>
-          <button id="finish" class="btn btn-quiet" type="button">Finish</button>
         </div>
+        <button id="finish" class="btn" type="button">Finish</button>
       </div>
 
       <div id="exercise-list"></div>
 
-      <div class="row-2 add-exercise-row">
-        <select id="add-exercise"><option value="">Add an exercise…</option></select>
-        <button id="new-exercise" class="btn btn-quiet" type="button">+ New</button>
-      </div>
-
-      <form id="new-exercise-form" class="stack" hidden>
-        <input type="text" id="new-ex-name" placeholder="Exercise name" required />
-        <select id="new-ex-day">
-          {DAYS.map((d) => <option value={d}>{d}</option>)}
-        </select>
-        <div class="row-2">
-          <button type="submit" class="btn btn-primary">Add exercise</button>
-          <button type="button" id="new-ex-cancel" class="btn btn-quiet">Cancel</button>
-        </div>
-      </form>
+      <button id="open-picker" class="btn btn-wide" type="button">
+        + Add exercise
+      </button>
       <p id="session-msg" class="description" role="status"></p>
     </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section id="view-history" class="view" hidden>
+      <h1>History</h1>
+      <div id="history-list"></div>
+    </section>
+
+    <!-- ============ ONE PAST WORKOUT ============ -->
+    <section id="view-workout" class="view" hidden>
+      <button id="back-to-history" class="linkish" type="button">← History</button>
+      <h1 id="workout-title">Workout</h1>
+      <p id="workout-meta" class="muted"></p>
+      <div id="workout-detail"></div>
+    </section>
+
+    <!-- ============ PROGRESS ============ -->
+    <section id="view-progress" class="view" hidden>
+      <h1>Progress</h1>
+      <select id="progress-exercise" class="wide">
+        <option value="">Choose an exercise…</option>
+      </select>
+      <select id="progress-metric" class="wide">
+        <option value="e1rm">Estimated 1RM</option>
+        <option value="top">Heaviest set</option>
+        <option value="volume">Total volume</option>
+      </select>
+      <canvas id="progress-chart" height="220"></canvas>
+      <p id="progress-msg" class="muted"></p>
+      <div id="progress-table"></div>
+    </section>
+
+    <!-- ============ EXERCISE PICKER (sheet) ============ -->
+    <div id="picker" class="sheet" hidden>
+      <div class="sheet-inner">
+        <div class="sheet-head">
+          <strong>Add exercise</strong>
+          <button id="picker-close" class="linkish" type="button">Close</button>
+        </div>
+        <div id="picker-list" class="picker-list"></div>
+        <form id="new-exercise-form" class="stack sheet-new">
+          <input type="text" id="new-ex-name" placeholder="New exercise name" />
+          <select id="new-ex-day">
+            {DAYS.map((d) => <option value={d}>{d}</option>)}
+          </select>
+          <button type="submit" class="btn btn-primary">Create &amp; add</button>
+        </form>
+        <p id="picker-msg" class="description" role="status"></p>
+      </div>
+    </div>
+
+    <!-- ============ TABS ============ -->
+    <nav id="tabs" class="tabbar" hidden>
+      <button class="tab" data-view="home" type="button">Workout</button>
+      <button class="tab" data-view="history" type="button">History</button>
+      <button class="tab" data-view="progress" type="button">Progress</button>
+    </nav>
   </main>
 </Layout>
 
@@ -101,14 +128,8 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
   type Exercise = { id: string; name: string; day: string; archived: boolean };
   type Workout = { id: string; day: string; started_at: string; ended_at: string | null };
   type SetRow = {
-    id: string;
-    workout_id: string;
-    exercise_id: string;
-    set_number: number;
-    weight: number;
-    unit: "lbs" | "kg";
-    reps: number;
-    performed_at: string;
+    id: string; workout_id: string; exercise_id: string; set_number: number;
+    weight: number; unit: "lbs" | "kg"; reps: number; performed_at: string;
   };
 
   let userId: string | null = null;
@@ -118,9 +139,9 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
   let current: Workout | null = null;
   let sessionExercises: string[] = [];
   let timerHandle: number | null = null;
-  const charts = new Map<string, Chart>();
+  let editing: string | null = null;      // set id being edited
+  let progressChart: Chart | null = null;
 
-  // If a call never settles, fail loudly rather than looking successful.
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
     return Promise.race([
       p as Promise<T>,
@@ -130,69 +151,68 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     ]);
   }
 
-  const say = (msg: string) => ($("session-msg").textContent = msg);
+  const say = (m: string) => ($("session-msg").textContent = m);
   const e1rm = (w: number, r: number) => w * (1 + r / 30);
-  const dayKey = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+  // Local date, not UTC: toISOString() would push an evening Pacific workout
+  // onto the next calendar day and group it wrongly on the chart.
+  const dayKey = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
 
-  if (!isConfigured) {
-    show("unconfigured");
-  } else {
-    main().catch((err) => {
-      show("auth");
-      $("auth-msg").textContent = `Error: ${err.message}`;
+  // Format a YYYY-MM-DD key without letting Date parse it as UTC midnight.
+  const fmtDayKey = (key: string) => {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+      weekday: "short", month: "short", day: "numeric",
     });
-  }
+  };
+  const nameOf = (id: string) => exercises.find((e) => e.id === id)?.name ?? "—";
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      weekday: "short", month: "short", day: "numeric", year: "numeric",
+    });
+
+  if (!isConfigured) show("unconfigured");
+  else main().catch((err) => { show("auth"); $("auth-msg").textContent = `Error: ${err.message}`; });
 
   async function main() {
     const { data } = await supabase.auth.getSession();
 
-    // On localhost only, sign in automatically so the gate is out of the way
-    // while building. import.meta.env.DEV is false in production builds, so
-    // this whole branch is stripped from the deployed bundle.
     if (!data.session && import.meta.env.DEV && import.meta.env.PUBLIC_DEV_PASSWORD) {
       const { data: dev } = await supabase.auth.signInWithPassword({
         email: ACCOUNT_EMAIL,
         password: import.meta.env.PUBLIC_DEV_PASSWORD,
       });
-      if (dev.user) {
-        await afterSignIn(dev.user.id);
-        wireEvents();
-        return;
-      }
+      if (dev.user) { await afterSignIn(dev.user.id); wire(); return; }
     }
 
-    if (data.session) {
-      await afterSignIn(data.session.user.id);
-    } else {
-      show("auth");
-    }
+    if (data.session) await afterSignIn(data.session.user.id);
+    else show("auth");
 
-    // Never call supabase from inside this callback: the client holds a lock
-    // while it runs and every query awaits getSession(), which deadlocks.
-    supabase.auth.onAuthStateChange((_event, session) => {
+    // Never call supabase from inside this callback: it holds a lock and
+    // every query awaits getSession(), which deadlocks.
+    supabase.auth.onAuthStateChange((_e, session) => {
       if (!session || userId) return;
       setTimeout(() => afterSignIn(session.user.id), 0);
     });
 
-    wireEvents();
+    wire();
   }
 
-  function wireEvents() {
+  function wire() {
     $("auth-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const field = <HTMLInputElement>$("password");
+      const f = <HTMLInputElement>$("password");
       $("auth-msg").textContent = "Checking…";
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: ACCOUNT_EMAIL,
-        password: field.value,
+        email: ACCOUNT_EMAIL, password: f.value,
       });
-      field.value = "";
+      f.value = "";
       if (error) {
         $("auth-msg").textContent =
-          error.message === "Invalid login credentials"
-            ? "Wrong password."
-            : `Error: ${error.message}`;
-        field.focus();
+          error.message === "Invalid login credentials" ? "Wrong password." : `Error: ${error.message}`;
+        f.focus();
         return;
       }
       $("auth-msg").textContent = "";
@@ -201,174 +221,138 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
 
     $("signout").addEventListener("click", async () => {
       await supabase.auth.signOut();
-      window.location.reload();
+      location.reload();
     });
 
     document.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
       b.addEventListener("click", () => startWorkout(b.dataset.day!))
     );
+    document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
+      b.addEventListener("click", () => goto(b.dataset.view!))
+    );
 
     $("finish").addEventListener("click", finishWorkout);
-    $("add-exercise").addEventListener("change", onAddExercise);
-    $("new-exercise").addEventListener("click", () => {
-      show("new-exercise-form");
-      (<HTMLSelectElement>$("new-ex-day")).value = current?.day ?? "Chest";
-      (<HTMLInputElement>$("new-ex-name")).focus();
-    });
-    $("new-ex-cancel").addEventListener("click", () => {
-      show("new-exercise-form", false);
-      (<HTMLInputElement>$("new-ex-name")).value = "";
-    });
+    $("open-picker").addEventListener("click", openPicker);
+    $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
+    $("back-to-history").addEventListener("click", () => goto("history"));
+    $("progress-exercise").addEventListener("change", renderProgress);
+    $("progress-metric").addEventListener("change", renderProgress);
   }
 
+  // ---------------------------------------------------------------- loading
   async function afterSignIn(id: string) {
     if (userId === id) return;
     userId = id;
     show("auth", false);
 
-    const [exRes, wRes, sRes] = await Promise.all([
+    const [ex, wo, st] = await Promise.all([
       supabase.from("exercises").select("id,name,day,archived").order("name"),
-      supabase
-        .from("workouts")
-        .select("id,day,started_at,ended_at")
-        .order("started_at", { ascending: false })
-        .limit(200),
-      supabase
-        .from("sets")
+      supabase.from("workouts").select("id,day,started_at,ended_at")
+        .order("started_at", { ascending: false }).limit(300),
+      supabase.from("sets")
         .select("id,workout_id,exercise_id,set_number,weight,unit,reps,performed_at")
-        .order("performed_at", { ascending: false })
-        .limit(5000),
+        .order("performed_at", { ascending: false }).limit(5000),
     ]);
 
-    const failure = exRes.error ?? wRes.error ?? sRes.error;
-    if (failure) {
-      show("pick-day");
-      say(`Could not load: ${failure.message}`);
-      return;
-    }
+    const bad = ex.error ?? wo.error ?? st.error;
+    if (bad) { goto("home"); say(`Could not load: ${bad.message}`); return; }
 
-    exercises = (exRes.data ?? []) as Exercise[];
-    workouts = (wRes.data ?? []) as Workout[];
-    allSets = (sRes.data ?? []) as SetRow[];
+    exercises = (ex.data ?? []) as Exercise[];
+    workouts = (wo.data ?? []) as Workout[];
+    allSets = (st.data ?? []) as SetRow[];
 
+    show("tabs");
     const open = workouts.find((w) => !w.ended_at);
-    if (open) {
-      await enterSession(open);
-    } else {
-      showDayPicker();
+    if (open) await enterSession(open);
+    else goto("home");
+  }
+
+  // ------------------------------------------------------------------ views
+  function goto(view: string) {
+    for (const v of ["home", "session", "history", "workout", "progress"])
+      show(`view-${v}`, false);
+    show("picker", false);
+
+    document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
+      b.classList.toggle("tab-on", b.dataset.view === view ||
+        (view === "session" && b.dataset.view === "home") ||
+        (view === "workout" && b.dataset.view === "history"))
+    );
+
+    if (view === "home") {
+      // An open session owns the Workout tab.
+      if (current) { show("view-session"); return; }
+      show("view-home");
+    } else if (view === "session") {
+      show("view-session");
+    } else if (view === "history") {
+      show("view-history");
+      renderHistory();
+    } else if (view === "progress") {
+      show("view-progress");
+      renderProgressPicker();
+      renderProgress();
+    } else if (view === "workout") {
+      show("view-workout");
     }
   }
 
-  function showDayPicker() {
-    current = null;
-    stopTimer();
-    show("session", false);
-    show("pick-day");
-    renderRecent();
-  }
-
-  function renderRecent() {
-    const done = workouts.filter((w) => w.ended_at).slice(0, 8);
-    if (!done.length) {
-      $("recent").innerHTML = '<p class="description">No finished workouts yet.</p>';
-      return;
-    }
-    $("recent").innerHTML = done
-      .map((w) => {
-        const rows = allSets.filter((s) => s.workout_id === w.id);
-        const vol = rows.reduce((t, r) => t + r.weight * r.reps, 0);
-        const mins = Math.round(
-          (new Date(w.ended_at!).getTime() - new Date(w.started_at).getTime()) / 60000
-        );
-        return `<div class="recent-row"><strong>${esc(w.day)}</strong>
-          <time>${dayKey(w.started_at)} · ${rows.length} sets · ${Math.round(vol)} vol · ${mins} min</time></div>`;
-      })
-      .join("");
-  }
-
+  // --------------------------------------------------------------- lifecycle
   async function startWorkout(day: string) {
     if (!DAYS.includes(day)) return;
     const { data, error } = await withTimeout(
-      supabase
-        .from("workouts")
-        .insert({ day, user_id: userId })
-        .select("id,day,started_at,ended_at")
-        .single()
+      supabase.from("workouts").insert({ day, user_id: userId })
+        .select("id,day,started_at,ended_at").single()
     );
-    if (error) {
-      say(`Could not start: ${error.message}`);
-      return;
-    }
+    if (error) { say(`Could not start: ${error.message}`); return; }
     const w = data as Workout;
     workouts.unshift(w);
 
-    // Seed the session with this day's exercises; remove what you are not
-    // doing and add anything else.
     const forDay = exercises.filter((e) => e.day === day && !e.archived);
     if (forDay.length) {
-      const rows = forDay.map((e, i) => ({
-        user_id: userId,
-        workout_id: w.id,
-        exercise_id: e.id,
-        position: i,
-      }));
-      await supabase.from("workout_exercises").insert(rows);
+      await supabase.from("workout_exercises").insert(
+        forDay.map((e, i) => ({
+          user_id: userId, workout_id: w.id, exercise_id: e.id, position: i,
+        }))
+      );
     }
     await enterSession(w);
   }
 
   async function enterSession(w: Workout) {
     current = w;
-    show("pick-day", false);
-    show("session");
     $("session-day").textContent = w.day;
-
-    const { data, error } = await supabase
-      .from("workout_exercises")
-      .select("exercise_id,position")
-      .eq("workout_id", w.id)
-      .order("position");
-
-    if (error) {
-      say(`Could not load exercises: ${error.message}`);
-      return;
-    }
+    const { data, error } = await supabase.from("workout_exercises")
+      .select("exercise_id,position").eq("workout_id", w.id).order("position");
+    if (error) { say(`Could not load exercises: ${error.message}`); return; }
     sessionExercises = (data ?? []).map((r: any) => r.exercise_id);
-
     startTimer();
-    renderAddPicker();
+    goto("session");
     renderSession();
   }
 
   async function finishWorkout() {
     if (!current) return;
+    if (!confirm("Finish this workout?")) return;
     const { error } = await withTimeout(
-      supabase
-        .from("workouts")
-        .update({ ended_at: new Date().toISOString() })
+      supabase.from("workouts").update({ ended_at: new Date().toISOString() })
         .eq("id", current.id)
     );
-    if (error) {
-      say(`Could not finish: ${error.message}`);
-      return;
-    }
+    if (error) { say(`Could not finish: ${error.message}`); return; }
     const w = workouts.find((x) => x.id === current!.id);
     if (w) w.ended_at = new Date().toISOString();
-    charts.forEach((c) => c.destroy());
-    charts.clear();
-    showDayPicker();
+    current = null;
+    stopTimer();
+    goto("home");
   }
 
   function startTimer() {
     stopTimer();
     const tick = () => {
       if (!current) return;
-      const ms = Date.now() - new Date(current.started_at).getTime();
-      const total = Math.max(0, Math.floor(ms / 1000));
-      const h = Math.floor(total / 3600);
-      const m = Math.floor((total % 3600) / 60);
-      const s = total % 60;
+      const t = Math.max(0, Math.floor((Date.now() - new Date(current.started_at).getTime()) / 1000));
+      const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
       $("timer").textContent = h
         ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
         : `${m}:${String(s).padStart(2, "0")}`;
@@ -376,234 +360,190 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     tick();
     timerHandle = window.setInterval(tick, 1000);
   }
+  function stopTimer() { if (timerHandle) clearInterval(timerHandle); timerHandle = null; }
 
-  function stopTimer() {
-    if (timerHandle) window.clearInterval(timerHandle);
-    timerHandle = null;
+  // ------------------------------------------------------------ the picker
+  // Shows the WHOLE library grouped by day. Things already in the session are
+  // shown greyed out rather than hidden, which is what made this confusing.
+  function openPicker() {
+    show("picker");
+    ($("new-ex-day") as HTMLSelectElement).value = current?.day ?? "Chest";
+    renderPickerList();
   }
 
-  function renderAddPicker() {
-    const sel = <HTMLSelectElement>$("add-exercise");
-    const available = exercises.filter(
-      (e) => !e.archived && !sessionExercises.includes(e.id)
+  function renderPickerList() {
+    const host = $("picker-list");
+    const live = exercises.filter((e) => !e.archived);
+    if (!live.length) {
+      host.innerHTML = '<p class="muted">No exercises yet. Create one below.</p>';
+      return;
+    }
+    host.innerHTML = DAYS.map((d) => {
+      const inDay = live.filter((e) => e.day === d);
+      if (!inDay.length) return "";
+      return `<div class="picker-group"><h3>${d}</h3>${inDay
+        .map((e) => {
+          const already = sessionExercises.includes(e.id);
+          return `<button type="button" class="picker-item${already ? " picker-item-on" : ""}"
+            data-ex="${e.id}"${already ? " disabled" : ""}>
+            ${esc(e.name)}${already ? "<span class=\"tag\">in session</span>" : ""}
+          </button>`;
+        })
+        .join("")}</div>`;
+    }).join("");
+
+    host.querySelectorAll<HTMLButtonElement>(".picker-item:not([disabled])").forEach((b) =>
+      b.addEventListener("click", () => addToSession(b.dataset.ex!))
     );
-    sel.innerHTML =
-      '<option value="">Add an exercise…</option>' +
-      DAYS.map((d) => {
-        const inDay = available.filter((e) => e.day === d);
-        if (!inDay.length) return "";
-        return `<optgroup label="${d}">${inDay
-          .map((e) => `<option value="${e.id}">${esc(e.name)}</option>`)
-          .join("")}</optgroup>`;
-      }).join("");
   }
 
-  async function onAddExercise() {
-    const sel = <HTMLSelectElement>$("add-exercise");
-    const id = sel.value;
-    if (!id || !current) return;
-    sel.value = "";
+  async function addToSession(id: string) {
+    if (!current) return;
     const { error } = await withTimeout(
       supabase.from("workout_exercises").insert({
-        user_id: userId,
-        workout_id: current.id,
-        exercise_id: id,
+        user_id: userId, workout_id: current.id, exercise_id: id,
         position: sessionExercises.length,
       })
     );
-    if (error) {
-      say(`Could not add: ${error.message}`);
-      return;
-    }
+    if (error) { $("picker-msg").textContent = `Could not add: ${error.message}`; return; }
     sessionExercises.push(id);
-    renderAddPicker();
+    $("picker-msg").textContent = "";
+    renderPickerList();
     renderSession();
   }
 
   async function onNewExercise(e: Event) {
     e.preventDefault();
-    if (!current) return;
-    const nameField = <HTMLInputElement>$("new-ex-name");
-    const name = nameField.value.trim();
-    if (!name) return;
-    const match = (<HTMLSelectElement>$("new-ex-day")).value;
+    const field = <HTMLInputElement>$("new-ex-name");
+    const name = field.value.trim();
+    if (!name || !current) return;
+    const day = (<HTMLSelectElement>$("new-ex-day")).value;
 
     let data: any, error: any;
     try {
       ({ data, error } = await withTimeout(
-        supabase
-          .from("exercises")
-          .insert({ name, day: match, user_id: userId })
-          .select("id,name,day,archived")
-          .single()
+        supabase.from("exercises").insert({ name, day, user_id: userId })
+          .select("id,name,day,archived").single()
       ));
     } catch (err) {
-      say(`Error: ${(err as Error).message}`);
+      $("picker-msg").textContent = `Error: ${(err as Error).message}`;
       return;
     }
     if (error) {
-      say(
-        error.message.includes("duplicate")
-          ? `"${name}" already exists.`
-          : `Error: ${error.message}`
-      );
+      $("picker-msg").textContent = error.message.includes("duplicate")
+        ? `"${name}" already exists.` : `Error: ${error.message}`;
       return;
     }
-
-    nameField.value = "";
-    show("new-exercise-form", false);
+    field.value = "";
     exercises.push(data as Exercise);
     exercises.sort((a, b) => a.name.localeCompare(b.name));
-    await supabase.from("workout_exercises").insert({
-      user_id: userId,
-      workout_id: current.id,
-      exercise_id: data.id,
-      position: sessionExercises.length,
-    });
-    sessionExercises.push(data.id);
-    renderAddPicker();
-    renderSession();
+    await addToSession(data.id);
   }
 
   async function removeExercise(exId: string) {
     if (!current) return;
-    const logged = allSets.filter(
-      (s) => s.workout_id === current!.id && s.exercise_id === exId
-    );
-    if (logged.length) {
-      const name = exercises.find((e) => e.id === exId)?.name ?? "this";
-      if (
-        !confirm(
-          `${name} has ${logged.length} set(s) logged today. Remove it and delete those sets?`
-        )
-      )
-        return;
-      const { error } = await supabase
-        .from("sets")
-        .delete()
-        .eq("workout_id", current.id)
-        .eq("exercise_id", exId);
-      if (error) {
-        say(`Could not remove: ${error.message}`);
-        return;
-      }
-      allSets = allSets.filter(
-        (s) => !(s.workout_id === current!.id && s.exercise_id === exId)
-      );
-    }
-    const { error } = await supabase
-      .from("workout_exercises")
-      .delete()
-      .eq("workout_id", current.id)
-      .eq("exercise_id", exId);
-    if (error) {
-      say(`Could not remove: ${error.message}`);
+    const logged = allSets.filter((s) => s.workout_id === current!.id && s.exercise_id === exId);
+    if (logged.length && !confirm(`${nameOf(exId)} has ${logged.length} set(s) today. Remove and delete them?`))
       return;
+    if (logged.length) {
+      const { error } = await supabase.from("sets").delete()
+        .eq("workout_id", current.id).eq("exercise_id", exId);
+      if (error) { say(`Could not remove: ${error.message}`); return; }
+      allSets = allSets.filter((s) => !(s.workout_id === current!.id && s.exercise_id === exId));
     }
-    sessionExercises = sessionExercises.filter((id) => id !== exId);
-    charts.get(exId)?.destroy();
-    charts.delete(exId);
-    renderAddPicker();
+    const { error } = await supabase.from("workout_exercises").delete()
+      .eq("workout_id", current.id).eq("exercise_id", exId);
+    if (error) { say(`Could not remove: ${error.message}`); return; }
+    sessionExercises = sessionExercises.filter((i) => i !== exId);
     renderSession();
   }
 
-  // Same set number, from the most recent previous session containing it.
-  function lastTime(exId: string, setNumber: number): SetRow | null {
-    const previous = allSets
-      .filter(
-        (s) =>
-          s.exercise_id === exId &&
-          s.workout_id !== current?.id &&
-          s.set_number === setNumber
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.performed_at).getTime() - new Date(a.performed_at).getTime()
-      );
-    return previous[0] ?? null;
+  // -------------------------------------------------- last time, same slot
+  function lastTime(exId: string, n: number): SetRow | null {
+    return allSets
+      .filter((s) => s.exercise_id === exId && s.workout_id !== current?.id && s.set_number === n)
+      .sort((a, b) => +new Date(b.performed_at) - +new Date(a.performed_at))[0] ?? null;
   }
 
+  // ------------------------------------------------------------- session UI
   function renderSession() {
     if (!current) return;
     const host = $("exercise-list");
-
     if (!sessionExercises.length) {
-      host.innerHTML = '<p class="description">No exercises yet — add one below.</p>';
+      host.innerHTML = '<p class="muted">Nothing here yet — add an exercise below.</p>';
       return;
     }
 
-    host.innerHTML = sessionExercises
-      .map((exId) => {
-        const ex = exercises.find((e) => e.id === exId);
-        if (!ex) return "";
-        const done = allSets
-          .filter((s) => s.workout_id === current!.id && s.exercise_id === exId)
-          .sort((a, b) => a.set_number - b.set_number);
-        const nextNum = done.length + 1;
-        const prev = lastTime(exId, nextNum);
-        const lastUnit =
-          done[done.length - 1]?.unit ?? localStorage.getItem("lift:unit") ?? "lbs";
+    host.innerHTML = sessionExercises.map((exId) => {
+      const ex = exercises.find((e) => e.id === exId);
+      if (!ex) return "";
+      const done = allSets
+        .filter((s) => s.workout_id === current!.id && s.exercise_id === exId)
+        .sort((a, b) => a.set_number - b.set_number);
+      const next = done.length + 1;
+      const prev = lastTime(exId, next);
+      const unit = done.at(-1)?.unit ?? localStorage.getItem("lift:unit") ?? "lbs";
 
-        const rows = done
-          .map((s) => {
-            const was = lastTime(exId, s.set_number);
-            const delta = was ? s.weight - was.weight : null;
-            const arrow = delta === null || delta === 0 ? "" : delta > 0 ? " ▲" : " ▼";
-            return `<li>
-              <span class="set-line">${s.set_number}. ${s.weight}${s.unit} × ${s.reps}${arrow}</span>
-              ${was ? `<span class="was">was ${was.weight}${was.unit} × ${was.reps}</span>` : ""}
-              <button class="btn btn-quiet del-set" data-set="${s.id}">×</button>
-            </li>`;
-          })
-          .join("");
+      const rows = done.map((s) => {
+        if (editing === s.id) {
+          return `<li class="set-row set-editing" data-set="${s.id}">
+            <input type="number" class="ed-weight" value="${s.weight}" step="0.5" min="0" inputmode="decimal" />
+            <input type="number" class="ed-reps" value="${s.reps}" step="1" min="1" inputmode="numeric" />
+            <button type="button" class="btn btn-sm save-set" data-set="${s.id}">Save</button>
+            <button type="button" class="linkish cancel-set">Cancel</button>
+          </li>`;
+        }
+        const was = lastTime(exId, s.set_number);
+        const d = was ? s.weight - was.weight : null;
+        const arrow = d === null || d === 0 ? "" : d > 0 ? " ▲" : " ▼";
+        return `<li class="set-row" data-set="${s.id}">
+          <button type="button" class="set-main edit-set" data-set="${s.id}">
+            <span class="set-n">${s.set_number}</span>
+            <span class="set-val">${s.weight}${s.unit} × ${s.reps}${arrow}</span>
+            ${was ? `<span class="was">was ${was.weight}${was.unit} × ${was.reps}</span>` : ""}
+          </button>
+          <button type="button" class="icon-btn del-set" data-set="${s.id}" aria-label="Delete set">×</button>
+        </li>`;
+      }).join("");
 
-        return `<div class="exercise-card" data-ex="${exId}">
-          <div class="exercise-head">
-            <h2>${esc(ex.name)}</h2>
-            <button class="btn btn-quiet remove-ex" data-ex="${exId}">remove</button>
-          </div>
-          <ul class="set-list">${rows}</ul>
-
-          <form class="set-form row-3" data-ex="${exId}">
-            <label class="field">
-              <span>Set ${nextNum} weight</span>
-              <input type="number" class="in-weight" inputmode="decimal" step="0.5" min="0" required />
-            </label>
-            <label class="field">
-              <span>Unit</span>
+      return `<section class="ex-card" data-ex="${exId}">
+        <header class="ex-head">
+          <h2>${esc(ex.name)}</h2>
+          <button type="button" class="linkish remove-ex" data-ex="${exId}">remove</button>
+        </header>
+        <ul class="set-list">${rows}</ul>
+        <p class="hint">${prev
+          ? `Set ${next} last time: <strong>${prev.weight}${prev.unit} × ${prev.reps}</strong>`
+          : `No set ${next} on record yet.`}</p>
+        <form class="log-form" data-ex="${exId}">
+          <div class="log-inputs">
+            <label><span>Weight</span>
+              <input type="number" class="in-weight" inputmode="decimal" step="0.5" min="0" required /></label>
+            <label><span>Reps</span>
+              <input type="number" class="in-reps" inputmode="numeric" step="1" min="1" required /></label>
+            <label><span>Unit</span>
               <select class="in-unit">
-                <option value="lbs"${lastUnit === "lbs" ? " selected" : ""}>lbs</option>
-                <option value="kg"${lastUnit === "kg" ? " selected" : ""}>kg</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Reps</span>
-              <input type="number" class="in-reps" inputmode="numeric" step="1" min="1" required />
-            </label>
-            <button type="submit" class="btn btn-primary">Log</button>
-          </form>
-          <p class="description last-hint">${
-            prev
-              ? `Last time, set ${nextNum}: <strong>${prev.weight}${prev.unit} × ${prev.reps}</strong>`
-              : `No set ${nextNum} on record for this exercise yet.`
-          }</p>
+                <option value="lbs"${unit === "lbs" ? " selected" : ""}>lbs</option>
+                <option value="kg"${unit === "kg" ? " selected" : ""}>kg</option>
+              </select></label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-wide">Log set ${next}</button>
+        </form>
+      </section>`;
+    }).join("");
 
-          <canvas class="ex-chart" height="150"></canvas>
-        </div>`;
-      })
-      .join("");
-
-    host.querySelectorAll<HTMLFormElement>(".set-form").forEach((f) =>
-      f.addEventListener("submit", onLogSet)
-    );
+    host.querySelectorAll<HTMLFormElement>(".log-form").forEach((f) =>
+      f.addEventListener("submit", onLogSet));
     host.querySelectorAll<HTMLButtonElement>(".remove-ex").forEach((b) =>
-      b.addEventListener("click", () => removeExercise(b.dataset.ex!))
-    );
+      b.addEventListener("click", () => removeExercise(b.dataset.ex!)));
     host.querySelectorAll<HTMLButtonElement>(".del-set").forEach((b) =>
-      b.addEventListener("click", () => deleteSet(b.dataset.set!))
-    );
-
-    sessionExercises.forEach(renderChart);
+      b.addEventListener("click", () => deleteSet(b.dataset.set!)));
+    host.querySelectorAll<HTMLButtonElement>(".edit-set").forEach((b) =>
+      b.addEventListener("click", () => { editing = b.dataset.set!; renderSession(); }));
+    host.querySelectorAll<HTMLButtonElement>(".save-set").forEach((b) =>
+      b.addEventListener("click", () => saveSet(b.dataset.set!)));
+    host.querySelectorAll<HTMLButtonElement>(".cancel-set").forEach((b) =>
+      b.addEventListener("click", () => { editing = null; renderSession(); }));
   }
 
   async function onLogSet(e: Event) {
@@ -611,41 +551,21 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     const form = <HTMLFormElement>e.currentTarget;
     const exId = form.dataset.ex!;
     if (!current) return;
-
     const weight = parseFloat((<HTMLInputElement>form.querySelector(".in-weight")).value);
     const reps = parseInt((<HTMLInputElement>form.querySelector(".in-reps")).value, 10);
     const unit = <"lbs" | "kg">(<HTMLSelectElement>form.querySelector(".in-unit")).value;
-
-    const done = allSets.filter(
-      (s) => s.workout_id === current!.id && s.exercise_id === exId
-    );
-    const set_number = done.length + 1;
+    const n = allSets.filter((s) => s.workout_id === current!.id && s.exercise_id === exId).length + 1;
 
     let data: any, error: any;
     try {
       ({ data, error } = await withTimeout(
-        supabase
-          .from("sets")
-          .insert({
-            user_id: userId,
-            workout_id: current.id,
-            exercise_id: exId,
-            set_number,
-            weight,
-            reps,
-            unit,
-          })
-          .select("id,workout_id,exercise_id,set_number,weight,unit,reps,performed_at")
-          .single()
+        supabase.from("sets").insert({
+          user_id: userId, workout_id: current.id, exercise_id: exId,
+          set_number: n, weight, reps, unit,
+        }).select("id,workout_id,exercise_id,set_number,weight,unit,reps,performed_at").single()
       ));
-    } catch (err) {
-      say(`Error: ${(err as Error).message}`);
-      return;
-    }
-    if (error) {
-      say(`Error: ${error.message}`);
-      return;
-    }
+    } catch (err) { say(`Error: ${(err as Error).message}`); return; }
+    if (error) { say(`Error: ${error.message}`); return; }
 
     allSets.unshift(data as SetRow);
     localStorage.setItem("lift:unit", unit);
@@ -653,32 +573,125 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     renderSession();
   }
 
+  async function saveSet(id: string) {
+    const li = document.querySelector(`.set-row[data-set="${id}"]`);
+    if (!li) return;
+    const weight = parseFloat((<HTMLInputElement>li.querySelector(".ed-weight")).value);
+    const reps = parseInt((<HTMLInputElement>li.querySelector(".ed-reps")).value, 10);
+    if (!(weight >= 0) || !(reps > 0)) { say("Weight and reps must be numbers."); return; }
+
+    const { data, error } = await withTimeout(
+      supabase.from("sets").update({ weight, reps }).eq("id", id)
+        .select("id,workout_id,exercise_id,set_number,weight,unit,reps,performed_at").single()
+    );
+    if (error) { say(`Could not save: ${error.message}`); return; }
+    const i = allSets.findIndex((s) => s.id === id);
+    if (i >= 0) allSets[i] = data as SetRow;
+    editing = null;
+    say("");
+    renderSession();
+  }
+
   async function deleteSet(id: string) {
     const { error } = await withTimeout(supabase.from("sets").delete().eq("id", id));
-    if (error) {
-      say(`Could not delete: ${error.message}`);
-      return;
-    }
+    if (error) { say(`Could not delete: ${error.message}`); return; }
     allSets = allSets.filter((s) => s.id !== id);
     renderSession();
   }
 
-  function renderChart(exId: string) {
-    const card = document.querySelector(`.exercise-card[data-ex="${exId}"]`);
-    const canvas = card?.querySelector<HTMLCanvasElement>(".ex-chart");
-    if (!canvas) return;
+  // -------------------------------------------------------------- history
+  function renderHistory() {
+    const done = workouts.filter((w) => w.ended_at);
+    if (!done.length) {
+      $("history-list").innerHTML = '<p class="muted">No finished workouts yet.</p>';
+      return;
+    }
+    $("history-list").innerHTML = done.map((w) => {
+      const rows = allSets.filter((s) => s.workout_id === w.id);
+      const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+      const mins = Math.round((+new Date(w.ended_at!) - +new Date(w.started_at)) / 60000);
+      return `<button type="button" class="hist-row" data-w="${w.id}">
+        <span class="hist-day">${esc(w.day)}</span>
+        <span class="hist-meta">${fmtDate(w.started_at)} · ${rows.length} sets · ${vol} vol · ${mins} min</span>
+      </button>`;
+    }).join("");
+
+    $("history-list").querySelectorAll<HTMLButtonElement>(".hist-row").forEach((b) =>
+      b.addEventListener("click", () => openWorkout(b.dataset.w!)));
+  }
+
+  function openWorkout(id: string) {
+    const w = workouts.find((x) => x.id === id);
+    if (!w) return;
+    const rows = allSets.filter((s) => s.workout_id === id);
+    const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+    const mins = w.ended_at
+      ? Math.round((+new Date(w.ended_at) - +new Date(w.started_at)) / 60000) : 0;
+
+    $("workout-title").textContent = w.day;
+    $("workout-meta").textContent =
+      `${fmtDate(w.started_at)} · ${rows.length} sets · ${vol} vol · ${mins} min`;
+
+    const byEx = new Map<string, SetRow[]>();
+    for (const s of rows) {
+      if (!byEx.has(s.exercise_id)) byEx.set(s.exercise_id, []);
+      byEx.get(s.exercise_id)!.push(s);
+    }
+    $("workout-detail").innerHTML = byEx.size
+      ? [...byEx].map(([exId, list]) => `<section class="ex-card">
+          <h2>${esc(nameOf(exId))}</h2>
+          <ul class="set-list">${list.sort((a, b) => a.set_number - b.set_number)
+            .map((s) => `<li class="set-row"><span class="set-main">
+              <span class="set-n">${s.set_number}</span>
+              <span class="set-val">${s.weight}${s.unit} × ${s.reps}</span></span></li>`).join("")}</ul>
+        </section>`).join("")
+      : '<p class="muted">No sets were logged.</p>';
+
+    goto("workout");
+  }
+
+  // -------------------------------------------------------------- progress
+  function renderProgressPicker() {
+    const sel = <HTMLSelectElement>$("progress-exercise");
+    const keep = sel.value;
+    const withData = exercises.filter((e) => allSets.some((s) => s.exercise_id === e.id));
+    sel.innerHTML = '<option value="">Choose an exercise…</option>' +
+      DAYS.map((d) => {
+        const inDay = withData.filter((e) => e.day === d);
+        if (!inDay.length) return "";
+        return `<optgroup label="${d}">${inDay
+          .map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join("")}</optgroup>`;
+      }).join("");
+    if (keep) sel.value = keep;
+  }
+
+  function renderProgress() {
+    const exId = (<HTMLSelectElement>$("progress-exercise")).value;
+    const metric = (<HTMLSelectElement>$("progress-metric")).value;
+    const canvas = <HTMLCanvasElement>$("progress-chart");
+
+    if (!exId) {
+      progressChart?.destroy(); progressChart = null;
+      canvas.style.display = "none";
+      $("progress-msg").textContent = "Pick an exercise.";
+      $("progress-table").innerHTML = "";
+      return;
+    }
 
     const rows = allSets.filter((s) => s.exercise_id === exId);
-    if (rows.length < 2) {
+    if (!rows.length) {
+      progressChart?.destroy(); progressChart = null;
       canvas.style.display = "none";
+      $("progress-msg").textContent = "Nothing logged for this exercise yet.";
+      $("progress-table").innerHTML = "";
       return;
     }
     canvas.style.display = "";
 
-    // Mixed units on one axis would be meaningless, so chart the dominant one.
     const kg = rows.filter((r) => r.unit === "kg").length;
     const unit = kg > rows.length - kg ? "kg" : "lbs";
     const inUnit = rows.filter((r) => r.unit === unit);
+    const dropped = rows.length - inUnit.length;
 
     const byDay = new Map<string, SetRow[]>();
     for (const r of inUnit) {
@@ -686,41 +699,43 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
       if (!byDay.has(k)) byDay.set(k, []);
       byDay.get(k)!.push(r);
     }
-
     const labels = [...byDay.keys()].sort();
-    const values = labels.map((d) =>
-      Math.round(Math.max(...byDay.get(d)!.map((r) => e1rm(r.weight, r.reps))))
-    );
+    const values = labels.map((d) => {
+      const rs = byDay.get(d)!;
+      if (metric === "volume") return Math.round(rs.reduce((t, r) => t + r.weight * r.reps, 0));
+      if (metric === "top") return Math.max(...rs.map((r) => r.weight));
+      return Math.round(Math.max(...rs.map((r) => e1rm(r.weight, r.reps))));
+    });
+    const label = metric === "volume" ? `Volume (${unit})`
+      : metric === "top" ? `Heaviest set (${unit})` : `Est. 1RM (${unit})`;
 
-    charts.get(exId)?.destroy();
+    progressChart?.destroy();
     const ink = getComputedStyle(document.documentElement).color;
-    charts.set(
-      exId,
-      new Chart(canvas, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: `Est. 1RM (${unit})`,
-              data: values,
-              borderColor: "#50fa7b",
-              backgroundColor: "rgba(80,250,123,0.15)",
-              tension: 0.25,
-              pointRadius: 3,
-              fill: true,
-            },
-          ],
+    progressChart = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets: [{
+        label, data: values, borderColor: "#50fa7b",
+        backgroundColor: "rgba(80,250,123,0.15)", tension: 0.25, pointRadius: 3, fill: true,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: ink, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+          y: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { labels: { color: ink, boxWidth: 12 } } },
-          scales: {
-            x: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
-            y: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
-          },
-        },
-      })
-    );
+      },
+    });
+
+    $("progress-msg").textContent = dropped
+      ? `${dropped} set(s) logged in the other unit are not shown.` : "";
+
+    const recent = [...byDay.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 10);
+    $("progress-table").innerHTML = recent.map(([d, rs]) =>
+      `<div class="hist-row static">
+        <span class="hist-day">${fmtDayKey(d)}</span>
+        <span class="hist-meta">${rs.sort((a, b) => a.set_number - b.set_number)
+          .map((r) => `${r.weight}×${r.reps}`).join(", ")}</span>
+      </div>`).join("");
   }
 </script>
