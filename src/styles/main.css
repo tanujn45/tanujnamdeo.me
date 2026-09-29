@@ -13,6 +13,13 @@
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 
+/* The hidden attribute's UA rule is display:none, which any display rule in
+   this file overrides. Make hidden actually win, everywhere. */
+[hidden] {
+  display: none !important;
+}
+
+
 html {
   height: fit-content;
   color: #232333;
@@ -426,10 +433,6 @@ pre.terminal .prompt {
   display: none;
 }
 
-/* The overlay is display:flex, so the hidden attribute needs to win. */
-.konami-cat[hidden] {
-  display: none;
-}
 
 /* ---- Header and footer rows ----
    Flex containers drop whitespace-only text nodes between children, so the

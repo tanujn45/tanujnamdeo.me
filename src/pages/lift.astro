@@ -68,6 +68,17 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
         <select id="add-exercise"><option value="">Add an exercise…</option></select>
         <button id="new-exercise" class="btn btn-quiet" type="button">+ New</button>
       </div>
+
+      <form id="new-exercise-form" class="stack" hidden>
+        <input type="text" id="new-ex-name" placeholder="Exercise name" required />
+        <select id="new-ex-day">
+          {DAYS.map((d) => <option value={d}>{d}</option>)}
+        </select>
+        <div class="row-2">
+          <button type="submit" class="btn btn-primary">Add exercise</button>
+          <button type="button" id="new-ex-cancel" class="btn btn-quiet">Cancel</button>
+        </div>
+      </form>
       <p id="session-msg" class="description" role="status"></p>
     </section>
   </main>
@@ -199,7 +210,16 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
 
     $("finish").addEventListener("click", finishWorkout);
     $("add-exercise").addEventListener("change", onAddExercise);
-    $("new-exercise").addEventListener("click", onNewExercise);
+    $("new-exercise").addEventListener("click", () => {
+      show("new-exercise-form");
+      (<HTMLSelectElement>$("new-ex-day")).value = current?.day ?? "Chest";
+      (<HTMLInputElement>$("new-ex-name")).focus();
+    });
+    $("new-ex-cancel").addEventListener("click", () => {
+      show("new-exercise-form", false);
+      (<HTMLInputElement>$("new-ex-name")).value = "";
+    });
+    $("new-exercise-form").addEventListener("submit", onNewExercise);
   }
 
   async function afterSignIn(id: string) {
@@ -400,16 +420,13 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     renderSession();
   }
 
-  async function onNewExercise() {
+  async function onNewExercise(e: Event) {
+    e.preventDefault();
     if (!current) return;
-    const name = prompt("Exercise name")?.trim();
+    const nameField = <HTMLInputElement>$("new-ex-name");
+    const name = nameField.value.trim();
     if (!name) return;
-    const day = prompt(`Which day? (${DAYS.join(", ")})`, current.day)?.trim() ?? "";
-    const match = DAYS.find((d) => d.toLowerCase() === day.toLowerCase());
-    if (!match) {
-      say(`"${day}" is not one of ${DAYS.join(", ")}.`);
-      return;
-    }
+    const match = (<HTMLSelectElement>$("new-ex-day")).value;
 
     let data: any, error: any;
     try {
@@ -433,6 +450,8 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
       return;
     }
 
+    nameField.value = "";
+    show("new-exercise-form", false);
     exercises.push(data as Exercise);
     exercises.sort((a, b) => a.name.localeCompare(b.name));
     await supabase.from("workout_exercises").insert({
