@@ -41,6 +41,14 @@ error: Supabase credentials not set</pre>
           </svg>
         </button>
       </div>
+      <div id="start-confirm" class="start-confirm" hidden>
+        <p id="start-q"></p>
+        <div class="start-actions">
+          <button id="start-yes" class="btn btn-primary" type="button">Start</button>
+          <button id="start-no" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
       <div class="day-grid">
         {DAYS.map((d) => (
           <button class="btn day-btn" type="button" data-day={d}>{d}</button>
@@ -232,6 +240,7 @@ error: Supabase credentials not set</pre>
     if (el) el.textContent = email ? (NAME_BY_EMAIL[email] ?? "Lift") : "Lift";
   }
   let pickedWho: string | null = null;
+  let pendingDay: string | null = null;
   const DAYS = ["Legs", "Shoulders", "Chest", "Back", "Arms"];
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -417,6 +426,12 @@ error: Supabase credentials not set</pre>
       b.addEventListener("click", () => goto(b.dataset.view!))
     );
 
+    $("start-yes").addEventListener("click", () => {
+      const d = pendingDay;
+      cancelStart();
+      if (d) startWorkout(d);
+    });
+    $("start-no").addEventListener("click", cancelStart);
     $("finish").addEventListener("click", openFinishPanel);
     $("finish-cancel").addEventListener("click", closeFinishPanel);
     $("finish-save").addEventListener("click", () => { closeFinishPanel(); finishWorkout(); });
@@ -527,6 +542,7 @@ error: Supabase credentials not set</pre>
       // An open session owns the Workout tab.
       if (current) { show("view-session"); return; }
       show("view-home");
+      cancelStart();
       $("home-date").textContent = new Date().toLocaleDateString(undefined, {
         weekday: "long", month: "short", day: "numeric",
       });
@@ -554,6 +570,24 @@ error: Supabase credentials not set</pre>
   }
 
   // --------------------------------------------------------------- lifecycle
+  // Tapping a day used to create a workout outright, so a mis-tap left a
+  // stray session you then had to find and discard.
+  function askStart(day: string) {
+    pendingDay = day;
+    $("start-q").textContent = `Start a ${day} workout?`;
+    show("start-confirm");
+    document.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
+      b.classList.toggle("day-btn-on", b.dataset.day === day));
+    $("start-confirm").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function cancelStart() {
+    pendingDay = null;
+    show("start-confirm", false);
+    document.querySelectorAll<HTMLButtonElement>(".day-btn")
+      .forEach((b) => b.classList.remove("day-btn-on"));
+  }
+
   async function startWorkout(day: string) {
     if (!dayNames().includes(day)) return;
     const { data, error } = await withTimeout(
@@ -1536,7 +1570,7 @@ error: Supabase credentials not set</pre>
         .map((d) => `<button class="btn day-btn" type="button" data-day="${esc(d.name)}">${esc(d.name)}</button>`)
         .join("");
       host.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
-        b.addEventListener("click", () => startWorkout(b.dataset.day!)));
+        b.addEventListener("click", () => askStart(b.dataset.day!)));
     }
     // Keep the new-exercise picker in step with the categories that exist.
     const sel = <HTMLSelectElement>$("new-ex-day");

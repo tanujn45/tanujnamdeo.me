@@ -1741,3 +1741,35 @@ header nav a {
   border-bottom-color: var(--maincolor);
   font-weight: 600;
 }
+
+/* ---- confirm before starting a workout ---- */
+.start-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  margin: 1rem 0 0;
+  border: 1px solid var(--maincolor);
+  border-radius: 6px;
+}
+
+.start-confirm p {
+  margin: 0;
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+}
+
+.start-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.start-actions .btn {
+  flex: 1;
+}
+
+/* Which one you tapped, while the question is up. */
+.lift .day-btn-on {
+  border-color: var(--maincolor);
+  border-width: 2px;
+}
