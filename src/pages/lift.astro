@@ -16,18 +16,15 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     <!-- Sign in -->
     <section id="auth" hidden>
       <h2>Sign in</h2>
-      <p class="description">
-        A one-time link gets emailed to you. No password.
-      </p>
       <form id="auth-form" class="stack">
         <input
-          type="email"
-          id="email"
-          placeholder="you@example.com"
+          type="password"
+          id="password"
+          placeholder="Password"
           required
-          autocomplete="email"
+          autocomplete="current-password"
         />
-        <button type="submit" class="btn">Send link</button>
+        <button type="submit" class="btn btn-primary">Unlock</button>
       </form>
       <p id="auth-msg" class="description" role="status"></p>
     </section>
@@ -114,6 +111,8 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
   import { supabase, isConfigured } from "../lib/supabase";
   import Chart from "chart.js/auto";
 
+  const ACCOUNT_EMAIL = "tanujn45@gmail.com";
+
   const $ = (id: string) => document.getElementById(id)!;
   const show = (id: string, on = true) => ((<any>$(id)).hidden = !on);
 
@@ -159,17 +158,28 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     });
 
     // ---- auth ----
+    // The account identifier is fixed, so the page only asks for a password.
+    // This is still Supabase auth: the password is checked server-side and the
+    // resulting session is what row-level security keys off.
     $("auth-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = (<HTMLInputElement>$("email")).value.trim();
-      $("auth-msg").textContent = "Sending…";
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.href },
+      const field = <HTMLInputElement>$("password");
+      $("auth-msg").textContent = "Checking…";
+      const { error } = await supabase.auth.signInWithPassword({
+        email: ACCOUNT_EMAIL,
+        password: field.value,
       });
-      $("auth-msg").textContent = error
-        ? `Error: ${error.message}`
-        : "Check your email for the link.";
+      if (error) {
+        $("auth-msg").textContent =
+          error.message === "Invalid login credentials"
+            ? "Wrong password."
+            : `Error: ${error.message}`;
+        field.value = "";
+        field.focus();
+        return;
+      }
+      $("auth-msg").textContent = "";
+      field.value = "";
     });
 
     $("signout").addEventListener("click", async () => {
