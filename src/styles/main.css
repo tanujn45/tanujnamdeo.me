@@ -487,7 +487,8 @@ header nav a {
    44px tall, and inputs are 16px so iOS does not zoom the page on focus.
    ========================================================================= */
 .lift {
-  padding-bottom: 88px; /* clears the fixed tab bar */
+  /* Clears the fixed tab bar and the floating timer above it. */
+  padding-bottom: 132px;
 }
 
 .lift h1 {

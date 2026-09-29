@@ -485,6 +485,7 @@ error: Supabase credentials not set</pre>
     allSets = (st.data ?? []) as SetRow[];
 
     show("tabs");
+    show("rest");
     restoreRest();
     const open = workouts.find((w) => !w.ended_at);
     if (open) await enterSession(open);
@@ -496,11 +497,10 @@ error: Supabase credentials not set</pre>
     for (const v of ["home", "session", "history", "progress", "summary", "manage"])
       show(`view-${v}`, false);
     show("picker", false);
-    // The rest timer only makes sense inside a workout, and elsewhere it
-    // floats over the calendar.
-    const inSession = view === "session" || (view === "home" && !!current);
-    show("rest", inSession || !!restEnd);
-    if (!inSession) show("rest-menu", false);
+    // The timer is useful outside a workout too, so it stays. Content
+    // reserves room for it at the foot of the page rather than being covered.
+    show("rest");
+    show("rest-menu", false);
 
     document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
       b.classList.toggle("tab-on", b.dataset.view === view ||
