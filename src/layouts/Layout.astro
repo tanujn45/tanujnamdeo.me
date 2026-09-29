@@ -37,6 +37,18 @@ const year = new Date().getFullYear();
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.ico" />
+    {/* iOS ignores .ico for the home screen and falls back to a screenshot,
+        which is why it showed a letter. It wants a PNG, this size. */}
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    {bare && (
+      <>
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Lift" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </>
+    )}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Link previews -->

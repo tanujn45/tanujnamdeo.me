@@ -488,7 +488,7 @@ header nav a {
    ========================================================================= */
 .lift {
   /* Clears the fixed tab bar and the floating timer above it. */
-  padding-bottom: 132px;
+  padding-bottom: 150px;
 }
 
 .lift h1 {
@@ -1658,16 +1658,19 @@ header nav a {
 
 /* The rest pill sat on top of the calendar. Tuck it beside the tab bar. */
 .rest {
-  bottom: 60px;
-  right: 10px;
+  /* Clear of the tab bar rather than resting on its edge. */
+  bottom: 78px;
+  right: 12px;
 }
 
 .rest-pill {
-  min-width: 68px;
-  min-height: 42px;
-  padding: 0 14px;
-  font-size: 0.92rem;
-  opacity: 0.92;
+  /* Read at a glance mid-set, not squinted at. */
+  min-width: 92px;
+  min-height: 52px;
+  padding: 0 18px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  opacity: 0.95;
 }
 
 /* ---- who is lifting ---- */
