@@ -153,8 +153,13 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
       show("auth");
     }
 
+    // supabase-js holds an internal lock while this callback runs, and every
+    // supabase.from() call awaits getSession(), which needs that same lock.
+    // Calling into the database from here deadlocks silently, so defer out of
+    // the callback before touching anything.
     supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) onSignedIn(session.user.id, session.user.email ?? "");
+      if (!session) return;
+      setTimeout(() => onSignedIn(session.user.id, session.user.email ?? ""), 0);
     });
 
     // ---- auth ----
@@ -165,7 +170,7 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
       e.preventDefault();
       const field = <HTMLInputElement>$("password");
       $("auth-msg").textContent = "Checking…";
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: ACCOUNT_EMAIL,
         password: field.value,
       });
@@ -180,6 +185,9 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
       }
       $("auth-msg").textContent = "";
       field.value = "";
+      if (data.user) {
+        await onSignedIn(data.user.id, data.user.email ?? "");
+      }
     });
 
     $("signout").addEventListener("click", async () => {
@@ -191,11 +199,19 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     $("new-exercise").addEventListener("click", async () => {
       const name = prompt("Exercise name")?.trim();
       if (!name) return;
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert({ name, user_id: userId })
-        .select()
-        .single();
+      let data: any, error: any;
+      try {
+        ({ data, error } = await withTimeout(
+          supabase
+            .from("exercises")
+            .insert({ name, user_id: userId })
+            .select()
+            .single()
+        ));
+      } catch (err) {
+        $("set-msg").textContent = `Error: ${(err as Error).message}`;
+        return;
+      }
       if (error) {
         // The unique index rejects case-variant duplicates.
         $("set-msg").textContent = error.message.includes("duplicate")
@@ -221,11 +237,19 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
         return;
       }
 
-      const { data, error } = await supabase
-        .from("sets")
-        .insert({ exercise_id, weight, reps, unit, user_id: userId })
-        .select()
-        .single();
+      let data: any, error: any;
+      try {
+        ({ data, error } = await withTimeout(
+          supabase
+            .from("sets")
+            .insert({ exercise_id, weight, reps, unit, user_id: userId })
+            .select()
+            .single()
+        ));
+      } catch (err) {
+        $("set-msg").textContent = `Error: ${(err as Error).message}`;
+        return;
+      }
 
       if (error) {
         $("set-msg").textContent = `Error: ${error.message}`;
@@ -247,13 +271,29 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
     $("chart-metric").addEventListener("change", renderChart);
   }
 
+  // If a call never settles (the deadlock above was invisible for exactly this
+  // reason), fail loudly rather than leaving the UI looking successful.
+  function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
+    return Promise.race([
+      p as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error("timed out talking to the database")), ms)
+      ),
+    ]);
+  }
+
+  let loading = false;
+
   async function onSignedIn(id: string, email: string) {
+    if (loading || userId === id) return;
+    loading = true;
     userId = id;
     show("auth", false);
     show("app");
     $("who").textContent = email;
+    $("set-msg").textContent = "Loading…";
 
-    const [{ data: ex }, { data: st }] = await Promise.all([
+    const [exRes, stRes] = await Promise.all([
       supabase.from("exercises").select("id,name").order("name"),
       supabase
         .from("sets")
@@ -262,8 +302,19 @@ set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY</pre>
         .limit(2000),
     ]);
 
-    exercises = (ex ?? []) as Exercise[];
-    sets = (st ?? []) as SetRow[];
+    loading = false;
+
+    // Do not swallow these: a failure here used to leave the page looking
+    // fine with an empty exercise list and no explanation.
+    const failure = exRes.error ?? stRes.error;
+    if (failure) {
+      $("set-msg").textContent = `Could not load your data: ${failure.message}`;
+      return;
+    }
+    $("set-msg").textContent = "";
+
+    exercises = (exRes.data ?? []) as Exercise[];
+    sets = (stRes.data ?? []) as SetRow[];
 
     renderExercises();
     renderToday();
