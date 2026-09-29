@@ -419,9 +419,9 @@ error: Supabase credentials not set</pre>
       location.reload();
     });
 
-    document.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
-      b.addEventListener("click", () => startWorkout(b.dataset.day!))
-    );
+    // Day buttons are wired in renderDayButtons, which rebuilds them from the
+    // categories. Wiring them here too put startWorkout alongside askStart on
+    // the same buttons, so a tap both asked and started.
     document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
       b.addEventListener("click", () => goto(b.dataset.view!))
     );
