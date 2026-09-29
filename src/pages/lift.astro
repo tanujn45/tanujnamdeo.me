@@ -45,6 +45,10 @@ error: Supabase credentials not set</pre>
         <div id="cal-day"></div>
       </section>
 
+      <p class="home-links">
+        <button id="open-manage" class="linkish" type="button">Manage exercises &amp; categories</button>
+      </p>
+
       <p class="muted">
         <button id="signout" class="linkish" type="button">Sign out</button>
       </p>
@@ -94,18 +98,27 @@ error: Supabase credentials not set</pre>
       <button id="sum-done" class="btn btn-primary btn-wide" type="button">Done</button>
     </section>
 
+    <!-- ============ MANAGE ============ -->
+    <section id="view-manage" class="view" hidden>
+      <button id="manage-back" class="linkish" type="button">← Back</button>
+      <h1>Manage</h1>
+
+      <h2>Categories</h2>
+      <div id="manage-days"></div>
+      <form id="new-day-form" class="stack manage-new">
+        <input type="text" id="new-day-name" placeholder="New category, e.g. Push" />
+        <button type="submit" class="btn btn-primary">Add category</button>
+      </form>
+
+      <h2>Exercises</h2>
+      <div id="manage-exercises"></div>
+      <p id="manage-msg" class="picker-msg" role="status"></p>
+    </section>
+
     <!-- ============ HISTORY ============ -->
     <section id="view-history" class="view" hidden>
       <h1>History</h1>
       <div id="history-list"></div>
-    </section>
-
-    <!-- ============ ONE PAST WORKOUT ============ -->
-    <section id="view-workout" class="view" hidden>
-      <button id="back-to-history" class="linkish" type="button">← History</button>
-      <h1 id="workout-title">Workout</h1>
-      <p id="workout-meta" class="muted"></p>
-      <div id="workout-detail"></div>
     </section>
 
     <!-- ============ PROGRESS ============ -->
@@ -212,6 +225,8 @@ error: Supabase credentials not set</pre>
   let calMonth: Date | null = null;   // first day of the month on screen
   let removeArmed: string | null = null;
   let pickerArmed: string | null = null;
+  let days: { id: string; name: string; position: number }[] = [];
+  let manageArmed: string | null = null;
   // Keeps the last removal around so it can be put back verbatim.
   let lastRemoved: { exId: string; position: number; sets: SetRow[]; workoutId: string } | null = null;
   let undoTimer: number | null = null;
@@ -224,6 +239,7 @@ error: Supabase credentials not set</pre>
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
   let sumChart: Chart | null = null;
+  let summaryOrigin: "home" | "history" = "home";
 
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
     return Promise.race([
@@ -335,10 +351,12 @@ error: Supabase credentials not set</pre>
     $("finish-discard").addEventListener("click", onDiscard);
 
     $("open-picker").addEventListener("click", openPicker);
+    $("open-manage").addEventListener("click", () => goto("manage"));
+    $("manage-back").addEventListener("click", () => goto("home"));
+    $("new-day-form").addEventListener("submit", onNewDay);
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
-    $("back-to-history").addEventListener("click", () => goto("history"));
-    $("sum-done").addEventListener("click", () => goto("home"));
+    $("sum-done").addEventListener("click", () => goto(summaryOrigin));
     $("undo-btn").addEventListener("click", undoRemove);
     // The pill always opens the menu. It used to cancel outright while
     // running, which made Stop unreachable and let a mis-tap kill a rest.
@@ -369,8 +387,9 @@ error: Supabase credentials not set</pre>
     userId = id;
     show("auth", false);
 
-    const [ex, wo, st] = await Promise.all([
+    const [ex, dy, wo, st] = await Promise.all([
       supabase.from("exercises").select("id,name,day,archived").order("name"),
+      supabase.from("days").select("id,name,position").order("position"),
       supabase.from("workouts").select("id,day,started_at,ended_at")
         .order("started_at", { ascending: false }).limit(300),
       supabase.from("sets")
@@ -382,6 +401,11 @@ error: Supabase credentials not set</pre>
     if (bad) { goto("home"); say(`Could not load: ${bad.message}`); return; }
 
     exercises = (ex.data ?? []) as Exercise[];
+    // Categories live in the database now; fall back to the built-in five so
+    // the day picker can never come up blank.
+    days = ((dy.data ?? []) as typeof days);
+    if (!days.length) days = DAYS.map((n, i) => ({ id: n, name: n, position: i }));
+    renderDayButtons();
     workouts = (wo.data ?? []) as Workout[];
     allSets = (st.data ?? []) as SetRow[];
 
@@ -395,14 +419,14 @@ error: Supabase credentials not set</pre>
 
   // ------------------------------------------------------------------ views
   function goto(view: string) {
-    for (const v of ["home", "session", "history", "workout", "progress", "summary"])
+    for (const v of ["home", "session", "history", "progress", "summary", "manage"])
       show(`view-${v}`, false);
     show("picker", false);
 
     document.querySelectorAll<HTMLButtonElement>(".tab").forEach((b) =>
       b.classList.toggle("tab-on", b.dataset.view === view ||
         (view === "session" && b.dataset.view === "home") ||
-        (view === "workout" && b.dataset.view === "history"))
+        (view === "summary" && summaryOrigin === "history" && b.dataset.view === "history"))
     );
 
     if (view === "home") {
@@ -420,8 +444,11 @@ error: Supabase credentials not set</pre>
       renderOverall();
       renderProgressPicker();
       renderProgress();
-    } else if (view === "workout") {
-      show("view-workout");
+    } else if (view === "manage") {
+      manageArmed = null;
+      mSay("");
+      show("view-manage");
+      renderManage();
     } else if (view === "summary") {
       show("view-summary");
     }
@@ -429,7 +456,7 @@ error: Supabase credentials not set</pre>
 
   // --------------------------------------------------------------- lifecycle
   async function startWorkout(day: string) {
-    if (!DAYS.includes(day)) return;
+    if (!dayNames().includes(day)) return;
     const { data, error } = await withTimeout(
       supabase.from("workouts").insert({ day, user_id: userId })
         .select("id,day,started_at,ended_at").single()
@@ -551,9 +578,11 @@ error: Supabase credentials not set</pre>
   // ------------------------------------------------------------- summary
   // Shown straight after saving: what you just did, against the last time you
   // trained the same category.
-  function showSummary(id: string) {
+  function showSummary(id: string, origin: "home" | "history" = "home") {
     const w = workouts.find((x) => x.id === id);
     if (!w) { goto("home"); return; }
+    summaryOrigin = origin;
+    $("sum-done").textContent = origin === "history" ? "← Back to history" : "Done";
 
     const rows = allSets.filter((x) => x.workout_id === id);
     const unitOf = (list: SetRow[]) => {
@@ -579,7 +608,7 @@ error: Supabase credentials not set</pre>
     const prevRows = prev ? allSets.filter((x) => x.workout_id === prev.id) : [];
     const prevVol = prev ? volOf(prevRows) : 0;
 
-    $("sum-title").textContent = `${w.day} done`;
+    $("sum-title").textContent = origin === "history" ? w.day : `${w.day} done`;
     $("sum-meta").textContent = `${fmtDate(w.started_at)} · ${mins} min`;
 
     const delta = prev && prevVol ? Math.round(((vol - prevVol) / prevVol) * 100) : null;
@@ -696,7 +725,7 @@ error: Supabase credentials not set</pre>
     pickerArmed = null;
     $("picker-msg").textContent = "";
     show("picker");
-    ($("new-ex-day") as HTMLSelectElement).value = current?.day ?? "Chest";
+    ($("new-ex-day") as HTMLSelectElement).value = current?.day ?? dayNames()[0] ?? "Chest";
     renderPickerList();
   }
 
@@ -707,7 +736,7 @@ error: Supabase credentials not set</pre>
       host.innerHTML = '<p class="muted">No exercises yet. Create one below.</p>';
       return;
     }
-    host.innerHTML = DAYS.map((d) => {
+    host.innerHTML = dayNames().map((d) => {
       const inDay = live.filter((e) => e.day === d);
       if (!inDay.length) return "";
       return `<div class="picker-group"><h3>${d}</h3>${inDay
@@ -1317,6 +1346,157 @@ error: Supabase credentials not set</pre>
     } catch (e) {}
   }
 
+  // ------------------------------------------------------------ categories
+  function dayNames() {
+    return days.length ? days.map((d) => d.name) : DAYS;
+  }
+
+  function renderDayButtons() {
+    const host = document.querySelector(".day-grid");
+    if (host) {
+      host.innerHTML = days
+        .map((d) => `<button class="btn day-btn" type="button" data-day="${esc(d.name)}">${esc(d.name)}</button>`)
+        .join("");
+      host.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
+        b.addEventListener("click", () => startWorkout(b.dataset.day!)));
+    }
+    // Keep the new-exercise picker in step with the categories that exist.
+    const sel = <HTMLSelectElement>$("new-ex-day");
+    if (sel) {
+      const keep = sel.value;
+      sel.innerHTML = dayNames().map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+      if (keep && dayNames().includes(keep)) sel.value = keep;
+    }
+  }
+
+  // -------------------------------------------------------------- manage
+  const mSay = (t: string) => ($("manage-msg").textContent = t);
+
+  function renderManage() {
+    // --- categories ---
+    $("manage-days").innerHTML = days.length
+      ? days.map((d) => {
+          const uses = exercises.filter((e) => e.day === d.name && !e.archived).length;
+          const armed = manageArmed === `day:${d.id}`;
+          if (armed) {
+            return `<div class="manage-row confirm-row">
+              <span class="confirm-q">${uses ? `Move ${plural(uses, "exercise")} out first` : `Delete ${esc(d.name)}?`}</span>
+              ${uses ? "" : `<button type="button" class="btn btn-sm confirm-yes mg-day-yes" data-id="${d.id}">Yes</button>`}
+              <button type="button" class="btn btn-sm mg-cancel">${uses ? "OK" : "No"}</button>
+            </div>`;
+          }
+          return `<div class="manage-row">
+            <span class="manage-name">${esc(d.name)}</span>
+            <span class="manage-meta">${plural(uses, "exercise")}</span>
+            <button type="button" class="icon-btn mg-day-del" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button>
+          </div>`;
+        }).join("")
+      : '<p class="muted">No categories.</p>';
+
+    // --- exercises, grouped by category ---
+    const live = exercises.filter((e) => !e.archived);
+    const archived = exercises.filter((e) => e.archived);
+    let html = dayNames().map((name) => {
+      const inDay = live.filter((e) => e.day === name);
+      if (!inDay.length) return "";
+      return `<h3 class="manage-group">${esc(name)}</h3>` + inDay.map((e) => {
+        const used = allSets.some((x) => x.exercise_id === e.id);
+        if (manageArmed === `ex:${e.id}`) {
+          return `<div class="manage-row confirm-row">
+            <span class="confirm-q">${used ? "Hide it? History is kept." : "Delete it?"}</span>
+            <button type="button" class="btn btn-sm confirm-yes mg-ex-yes" data-id="${e.id}">Yes</button>
+            <button type="button" class="btn btn-sm mg-cancel">No</button>
+          </div>`;
+        }
+        return `<div class="manage-row">
+          <span class="manage-name">${esc(e.name)}</span>
+          <select class="mg-move" data-id="${e.id}" aria-label="Category for ${esc(e.name)}">
+            ${dayNames().map((n) => `<option value="${esc(n)}"${n === e.day ? " selected" : ""}>${esc(n)}</option>`).join("")}
+          </select>
+          <button type="button" class="icon-btn mg-ex-del" data-id="${e.id}" aria-label="Remove ${esc(e.name)}">×</button>
+        </div>`;
+      }).join("");
+    }).join("");
+
+    if (archived.length) {
+      html += `<h3 class="manage-group">Hidden</h3>` + archived.map((e) =>
+        `<div class="manage-row">
+          <span class="manage-name muted">${esc(e.name)}</span>
+          <button type="button" class="btn btn-sm mg-restore" data-id="${e.id}">Restore</button>
+        </div>`).join("");
+    }
+
+    $("manage-exercises").innerHTML = html || '<p class="muted">No exercises yet.</p>';
+
+    const on = (sel: string, fn: (b: HTMLButtonElement) => void) =>
+      $("view-manage").querySelectorAll<HTMLButtonElement>(sel).forEach((b) =>
+        b.addEventListener("click", () => fn(b)));
+
+    on(".mg-day-del", (b) => { manageArmed = `day:${b.dataset.id}`; renderManage(); });
+    on(".mg-ex-del", (b) => { manageArmed = `ex:${b.dataset.id}`; renderManage(); });
+    on(".mg-cancel", () => { manageArmed = null; renderManage(); });
+    on(".mg-day-yes", (b) => deleteDay(b.dataset.id!));
+    on(".mg-ex-yes", (b) => { manageArmed = null; deleteExercise(b.dataset.id!); renderManage(); });
+    on(".mg-restore", (b) => restoreExercise(b.dataset.id!));
+
+    $("view-manage").querySelectorAll<HTMLSelectElement>(".mg-move").forEach((sel) =>
+      sel.addEventListener("change", () => moveExercise(sel.dataset.id!, sel.value)));
+  }
+
+  async function onNewDay(e: Event) {
+    e.preventDefault();
+    const field = <HTMLInputElement>$("new-day-name");
+    const name = field.value.trim();
+    if (!name) return;
+    const { data, error } = await withTimeout(
+      supabase.from("days")
+        .insert({ user_id: userId, name, position: days.length })
+        .select("id,name,position").single()
+    );
+    if (error) {
+      mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
+      return;
+    }
+    field.value = "";
+    days.push(data as any);
+    mSay(`Added ${name}.`);
+    renderDayButtons();
+    renderManage();
+  }
+
+  async function deleteDay(id: string) {
+    manageArmed = null;
+    const d = days.find((x) => x.id === id);
+    const { error } = await withTimeout(supabase.from("days").delete().eq("id", id));
+    if (error) { mSay(`Could not delete: ${error.message}`); return; }
+    days = days.filter((x) => x.id !== id);
+    mSay(`${d?.name ?? "Category"} deleted.`);
+    renderDayButtons();
+    renderManage();
+  }
+
+  async function moveExercise(exId: string, day: string) {
+    const { error } = await withTimeout(
+      supabase.from("exercises").update({ day }).eq("id", exId)
+    );
+    if (error) { mSay(`Could not move: ${error.message}`); return; }
+    const e = exercises.find((x) => x.id === exId);
+    if (e) e.day = day;
+    mSay(`${e?.name ?? "Exercise"} moved to ${day}.`);
+    renderManage();
+  }
+
+  async function restoreExercise(exId: string) {
+    const { error } = await withTimeout(
+      supabase.from("exercises").update({ archived: false }).eq("id", exId)
+    );
+    if (error) { mSay(`Could not restore: ${error.message}`); return; }
+    const e = exercises.find((x) => x.id === exId);
+    if (e) e.archived = false;
+    mSay(`${e?.name ?? "Exercise"} restored.`);
+    renderManage();
+  }
+
   // ---------------------------------------------------------- consistency
   // Same block characters the old WakaTime tracker used: light shade for a
   // rest day, medium for a session, full for a long one.
@@ -1464,33 +1644,7 @@ error: Supabase credentials not set</pre>
   }
 
   function openWorkout(id: string) {
-    const w = workouts.find((x) => x.id === id);
-    if (!w) return;
-    const rows = allSets.filter((s) => s.workout_id === id);
-    const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
-    const mins = w.ended_at
-      ? Math.round((+new Date(w.ended_at) - +new Date(w.started_at)) / 60000) : 0;
-
-    $("workout-title").textContent = w.day;
-    $("workout-meta").textContent =
-      `${fmtDate(w.started_at)} · ${plural(rows.length, "set")} · ${vol} vol · ${mins} min`;
-
-    const byEx = new Map<string, SetRow[]>();
-    for (const s of rows) {
-      if (!byEx.has(s.exercise_id)) byEx.set(s.exercise_id, []);
-      byEx.get(s.exercise_id)!.push(s);
-    }
-    $("workout-detail").innerHTML = byEx.size
-      ? [...byEx].map(([exId, list]) => `<section class="ex-card">
-          <h2>${esc(nameOf(exId))}</h2>
-          <ul class="set-list">${list.sort((a, b) => a.set_number - b.set_number)
-            .map((s) => `<li class="set-row"><span class="set-main">
-              <span class="set-n">${s.set_number}</span>
-              <span class="set-val">${s.weight}${s.unit} × ${s.reps}${isPR(s) ? CAT : ""}</span></span></li>`).join("")}</ul>
-        </section>`).join("")
-      : '<p class="muted">No sets were logged.</p>';
-
-    goto("workout");
+    showSummary(id, "history");
   }
 
   // -------------------------------------------------------------- progress
@@ -1587,7 +1741,7 @@ error: Supabase credentials not set</pre>
     const keep = sel.value;
     const withData = exercises.filter((e) => allSets.some((s) => s.exercise_id === e.id));
     sel.innerHTML = '<option value="">Choose an exercise…</option>' +
-      DAYS.map((d) => {
+      dayNames().map((d) => {
         const inDay = withData.filter((e) => e.day === d);
         if (!inDay.length) return "";
         return `<optgroup label="${d}">${inDay
