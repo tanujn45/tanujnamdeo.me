@@ -368,7 +368,23 @@ error: Supabase credentials not set</pre>
       supabase.from("workouts").insert({ day, user_id: userId })
         .select("id,day,started_at,ended_at").single()
     );
-    if (error) { say(`Could not start: ${error.message}`); return; }
+    if (error) {
+      // One open session per user is a database constraint; surface it as
+      // English, and resume the session that already exists.
+      if (error.message.includes("workouts_one_open_per_user")) {
+        const { data: open } = await supabase
+          .from("workouts").select("id,day,started_at,ended_at")
+          .is("ended_at", null).limit(1).single();
+        if (open) {
+          workouts.unshift(open as Workout);
+          await enterSession(open as Workout);
+          say("You already had a workout open — resumed it.");
+          return;
+        }
+      }
+      say(`Could not start: ${error.message}`);
+      return;
+    }
     const w = data as Workout;
     workouts.unshift(w);
 

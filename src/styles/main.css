@@ -657,7 +657,9 @@ header nav a {
 .set-main {
   flex: 1;
   display: flex;
-  align-items: baseline;
+  /* Not baseline: that parks the text at the top of the 44px box while the
+     delete button centres its glyph, leaving the two ~8px apart. */
+  align-items: center;
   gap: 10px;
   min-height: 44px;
   padding: 4px 0;
@@ -686,6 +688,10 @@ header nav a {
 }
 
 .icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   min-width: 44px;
   min-height: 44px;
   font-size: 1.2rem;
