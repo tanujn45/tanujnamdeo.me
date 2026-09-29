@@ -19,9 +19,6 @@ const {
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const year = new Date().getFullYear();
-
-const RESUME_URL =
-  "https://drive.google.com/file/d/1a0z_4PMKX9yhtR1hxoiCw6392CR-yBil/view?usp=sharing";
 ---
 
 <!doctype html>
@@ -121,8 +118,6 @@ const RESUME_URL =
             <a href="mailto:tanujn45@gmail.com" title="Mail"><Mail /></a>
             <span class="sep">|</span>
             <span class="footer-copy">⚡️ {year} © Tanuj</span>
-            <span class="sep">|</span>
-            <a href={RESUME_URL} target="_blank" rel="noreferrer">Resume</a>
           </div>
         </footer>
       </div>
