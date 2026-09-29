@@ -608,7 +608,9 @@ error: Supabase credentials not set</pre>
   // A personal record is a set whose estimated 1RM beats every earlier set of
   // the same exercise, so more reps at the same weight counts too. Weights are
   // normalised to lbs first, otherwise switching units would fake a record.
-  // The very first set of an exercise is not a PR: there is nothing to beat.
+  // With nothing earlier to compare against the set is, by definition, the
+  // best for that exercise, so it counts. Suppressing it used to mean that
+  // deleting an exercise's whole history stopped the next set counting.
   const toLbs = (w: number, unit: string) => (unit === "kg" ? w * 2.20462 : w);
 
   function isPR(set: SetRow): boolean {
@@ -618,7 +620,7 @@ error: Supabase credentials not set</pre>
         s.id !== set.id &&
         new Date(s.performed_at) < new Date(set.performed_at)
     );
-    if (!earlier.length) return false;
+    if (!earlier.length) return true;
     const best = Math.max(...earlier.map((s) => e1rm(toLbs(s.weight, s.unit), s.reps)));
     return e1rm(toLbs(set.weight, set.unit), set.reps) > best + 1e-9;
   }
