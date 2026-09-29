@@ -1670,20 +1670,50 @@ header nav a {
 }
 
 /* ---- who is lifting ---- */
+/* The picker is the whole screen's job, so centre it rather than leaving it
+   pinned to the top above an empty page. */
+#auth {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 72vh;
+}
+
 .who-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin: 2.5rem 0 1.5rem;
+  gap: 12px;
+  width: 100%;
+  /* Two stretched slabs across a desktop looked like a mistake; cap them. */
+  max-width: 380px;
+  margin: 0 0 1.5rem;
 }
 
 .lift .who-btn {
-  min-height: 92px;
+  min-height: 108px;
   font-size: 1.2rem;
+}
+
+#auth .stack {
+  width: 100%;
+  max-width: 380px;
+}
+
+#auth-msg {
+  text-align: center;
 }
 
 #auth-who {
   margin: 0;
+  text-align: center;
+}
+
+@media screen and (min-width: 640px) {
+  .lift .who-btn {
+    min-height: 132px;
+    font-size: 1.35rem;
+  }
 }
 
 /* ---- deleting a past workout ---- */
