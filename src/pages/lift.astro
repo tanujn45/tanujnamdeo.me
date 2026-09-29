@@ -59,6 +59,15 @@ error: Supabase credentials not set</pre>
         <button id="finish" class="btn" type="button">Finish</button>
       </div>
 
+      <div id="finish-panel" class="finish-panel" hidden>
+        <p id="finish-summary" class="muted"></p>
+        <div class="finish-actions">
+          <button id="finish-save" class="btn btn-primary" type="button">Save workout</button>
+          <button id="finish-discard" class="btn btn-danger" type="button">Discard</button>
+          <button id="finish-cancel" class="linkish" type="button">Keep going</button>
+        </div>
+      </div>
+
       <div id="exercise-list"></div>
 
       <button id="open-picker" class="btn btn-wide" type="button">
@@ -84,6 +93,17 @@ error: Supabase credentials not set</pre>
     <!-- ============ PROGRESS ============ -->
     <section id="view-progress" class="view" hidden>
       <h1>Progress</h1>
+
+      <h2>Overall</h2>
+      <select id="overall-metric" class="wide">
+        <option value="volume">Volume per session</option>
+        <option value="sets">Sets per session</option>
+        <option value="weekly">Sessions per week</option>
+      </select>
+      <canvas id="overall-chart" height="200"></canvas>
+      <p id="overall-msg" class="muted"></p>
+
+      <h2>By exercise</h2>
       <select id="progress-exercise" class="wide">
         <option value="">Choose an exercise…</option>
       </select>
@@ -154,10 +174,11 @@ error: Supabase credentials not set</pre>
   let sessionExercises: string[] = [];
   let timerHandle: number | null = null;
   let editing: string | null = null;      // set id being edited
-  let finishArmed = false;
+  let discardArmed = false;
   let calMonth: Date | null = null;   // first day of the month on screen
   let removeArmed: string | null = null;
   let progressChart: Chart | null = null;
+  let overallChart: Chart | null = null;
 
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
     return Promise.race([
@@ -248,31 +269,16 @@ error: Supabase credentials not set</pre>
       b.addEventListener("click", () => goto(b.dataset.view!))
     );
 
-    // Two taps rather than confirm(): a suppressed native dialog returns
-    // false, which made this button look simply dead.
-    $("finish").addEventListener("click", () => {
-      const btn = $("finish");
-      if (!finishArmed) {
-        finishArmed = true;
-        btn.textContent = "Tap to confirm";
-        btn.classList.add("btn-danger");
-        setTimeout(() => {
-          if (!finishArmed) return;
-          finishArmed = false;
-          btn.textContent = "Finish";
-          btn.classList.remove("btn-danger");
-        }, 4000);
-        return;
-      }
-      finishArmed = false;
-      btn.textContent = "Finish";
-      btn.classList.remove("btn-danger");
-      finishWorkout();
-    });
+    $("finish").addEventListener("click", openFinishPanel);
+    $("finish-cancel").addEventListener("click", closeFinishPanel);
+    $("finish-save").addEventListener("click", () => { closeFinishPanel(); finishWorkout(); });
+    $("finish-discard").addEventListener("click", onDiscard);
+
     $("open-picker").addEventListener("click", openPicker);
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
     $("back-to-history").addEventListener("click", () => goto("history"));
+    $("overall-metric").addEventListener("change", renderOverall);
     $("cal-prev").addEventListener("click", () => stepMonth(-1));
     $("cal-next").addEventListener("click", () => stepMonth(1));
     $("progress-exercise").addEventListener("change", renderProgress);
@@ -331,6 +337,7 @@ error: Supabase credentials not set</pre>
       renderHistory();
     } else if (view === "progress") {
       show("view-progress");
+      renderOverall();
       renderProgressPicker();
       renderProgress();
     } else if (view === "workout") {
@@ -370,6 +377,62 @@ error: Supabase credentials not set</pre>
     startTimer();
     goto("session");
     renderSession();
+  }
+
+  function openFinishPanel() {
+    if (!current) return;
+    discardArmed = false;
+    const rows = allSets.filter((x) => x.workout_id === current!.id);
+    const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+    const mins = Math.round((Date.now() - +new Date(current.started_at)) / 60000);
+    $("finish-summary").textContent =
+      `${rows.length} ${rows.length === 1 ? "set" : "sets"} · ${vol} vol · ${mins} min`;
+    const d = $("finish-discard");
+    d.textContent = rows.length ? `Discard ${rows.length}` : "Discard";
+    d.classList.remove("armed");
+    show("finish-panel");
+  }
+
+  function closeFinishPanel() {
+    discardArmed = false;
+    show("finish-panel", false);
+  }
+
+  // Discarding deletes the sets, so ask twice when there is something to lose.
+  function onDiscard() {
+    if (!current) return;
+    const rows = allSets.filter((x) => x.workout_id === current!.id);
+    const d = $("finish-discard");
+    if (rows.length && !discardArmed) {
+      discardArmed = true;
+      d.textContent = "Tap again to delete";
+      d.classList.add("armed");
+      setTimeout(() => {
+        if (!discardArmed) return;
+        discardArmed = false;
+        d.textContent = `Discard ${rows.length}`;
+        d.classList.remove("armed");
+      }, 4000);
+      return;
+    }
+    discardArmed = false;
+    discardWorkout();
+  }
+
+  async function discardWorkout() {
+    if (!current) return;
+    const id = current.id;
+    // sets and workout_exercises cascade from the workout row.
+    const { error } = await withTimeout(
+      supabase.from("workouts").delete().eq("id", id)
+    );
+    if (error) { say(`Could not discard: ${error.message}`); return; }
+    workouts = workouts.filter((w) => w.id !== id);
+    allSets = allSets.filter((x) => x.workout_id !== id);
+    current = null;
+    stopTimer();
+    closeFinishPanel();
+    goto("home");
   }
 
   async function finishWorkout() {
@@ -509,6 +572,27 @@ error: Supabase credentials not set</pre>
     renderSession();
   }
 
+  // ------------------------------------------------------------------- PRs
+  // A personal record is a set whose estimated 1RM beats every earlier set of
+  // the same exercise, so more reps at the same weight counts too. Weights are
+  // normalised to lbs first, otherwise switching units would fake a record.
+  // The very first set of an exercise is not a PR: there is nothing to beat.
+  const toLbs = (w: number, unit: string) => (unit === "kg" ? w * 2.20462 : w);
+
+  function isPR(set: SetRow): boolean {
+    const earlier = allSets.filter(
+      (s) =>
+        s.exercise_id === set.exercise_id &&
+        s.id !== set.id &&
+        new Date(s.performed_at) < new Date(set.performed_at)
+    );
+    if (!earlier.length) return false;
+    const best = Math.max(...earlier.map((s) => e1rm(toLbs(s.weight, s.unit), s.reps)));
+    return e1rm(toLbs(set.weight, set.unit), set.reps) > best + 1e-9;
+  }
+
+  const CAT = '<img class="pr-cat" src="/img/cat.png" alt="PR" title="Personal record" />';
+
   // -------------------------------------------------- last time, same slot
   function lastTime(exId: string, n: number): SetRow | null {
     return allSets
@@ -550,7 +634,7 @@ error: Supabase credentials not set</pre>
         return `<li class="set-row" data-set="${s.id}">
           <button type="button" class="set-main edit-set" data-set="${s.id}">
             <span class="set-n">${s.set_number}</span>
-            <span class="set-val">${s.weight}${s.unit} × ${s.reps}${arrow}</span>
+            <span class="set-val">${s.weight}${s.unit} × ${s.reps}${arrow}${isPR(s) ? CAT : ""}</span>
             ${was ? `<span class="was">was ${was.weight}${was.unit} × ${was.reps}</span>` : ""}
           </button>
           <button type="button" class="icon-btn del-set" data-set="${s.id}" aria-label="Delete set">×</button>
@@ -779,7 +863,7 @@ error: Supabase credentials not set</pre>
           <ul class="set-list">${list.sort((a, b) => a.set_number - b.set_number)
             .map((s) => `<li class="set-row"><span class="set-main">
               <span class="set-n">${s.set_number}</span>
-              <span class="set-val">${s.weight}${s.unit} × ${s.reps}</span></span></li>`).join("")}</ul>
+              <span class="set-val">${s.weight}${s.unit} × ${s.reps}${isPR(s) ? CAT : ""}</span></span></li>`).join("")}</ul>
         </section>`).join("")
       : '<p class="muted">No sets were logged.</p>';
 
@@ -787,6 +871,94 @@ error: Supabase credentials not set</pre>
   }
 
   // -------------------------------------------------------------- progress
+  // Everything combined, so you can see whether the whole programme is
+  // moving rather than one lift at a time.
+  function renderOverall() {
+    const metric = (<HTMLSelectElement>$("overall-metric")).value;
+    const canvas = <HTMLCanvasElement>$("overall-chart");
+
+    if (!allSets.length) {
+      overallChart?.destroy(); overallChart = null;
+      canvas.style.display = "none";
+      $("overall-msg").textContent = "Nothing logged yet.";
+      return;
+    }
+    canvas.style.display = "";
+
+    // Volume cannot mix units on one axis, so chart the dominant one.
+    const kg = allSets.filter((r) => r.unit === "kg").length;
+    const unit = kg > allSets.length - kg ? "kg" : "lbs";
+    const usable = metric === "volume"
+      ? allSets.filter((r) => r.unit === unit)
+      : allSets;
+    const dropped = metric === "volume" ? allSets.length - usable.length : 0;
+
+    let labels: string[] = [];
+    let values: number[] = [];
+    let label = "";
+
+    if (metric === "weekly") {
+      // Bucket by the Monday that starts each week.
+      const byWeek = new Map<string, Set<string>>();
+      for (const r of usable) {
+        const d = new Date(r.performed_at);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        const k = keyOf(d);
+        if (!byWeek.has(k)) byWeek.set(k, new Set());
+        byWeek.get(k)!.add(dayKey(r.performed_at));
+      }
+      labels = [...byWeek.keys()].sort();
+      values = labels.map((k) => byWeek.get(k)!.size);
+      label = "Sessions per week";
+      labels = labels.map(fmtDayKey);
+    } else {
+      const byDay = new Map<string, SetRow[]>();
+      for (const r of usable) {
+        const k = dayKey(r.performed_at);
+        if (!byDay.has(k)) byDay.set(k, []);
+        byDay.get(k)!.push(r);
+      }
+      const keys = [...byDay.keys()].sort();
+      values = keys.map((k) => {
+        const rs = byDay.get(k)!;
+        return metric === "sets"
+          ? rs.length
+          : Math.round(rs.reduce((t, r) => t + r.weight * r.reps, 0));
+      });
+      label = metric === "sets" ? "Sets" : `Volume (${unit})`;
+      labels = keys.map(fmtDayKey);
+    }
+
+    overallChart?.destroy();
+    const ink = getComputedStyle(document.documentElement).color;
+    overallChart = new Chart(canvas, {
+      type: metric === "weekly" ? "bar" : "line",
+      data: { labels, datasets: [{
+        label, data: values, borderColor: "#50fa7b",
+        backgroundColor: "rgba(80,250,123,0.25)", tension: 0.25, pointRadius: 3,
+        fill: metric !== "weekly",
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: ink, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+          y: { beginAtZero: true, ticks: { color: ink, precision: 0 },
+               grid: { color: "rgba(128,128,128,.2)" } },
+        },
+      },
+    });
+
+    const days = new Set(allSets.map((r) => dayKey(r.performed_at))).size;
+    const totalVol = Math.round(
+      allSets.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0)
+    );
+    $("overall-msg").textContent =
+      `${days} ${days === 1 ? "session" : "sessions"} · ${allSets.length} sets · ${totalVol} total volume (${unit})` +
+      (dropped ? ` · ${dropped} set(s) in the other unit not charted` : "");
+  }
+
   function renderProgressPicker() {
     const sel = <HTMLSelectElement>$("progress-exercise");
     const keep = sel.value;
