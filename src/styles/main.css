@@ -1516,3 +1516,64 @@ header nav a {
   margin-top: 1.2rem;
   max-width: 420px;
 }
+
+/* ---- screen header with an action on the right ---- */
+.screen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  /* The heading's own margins are zeroed below and moved here, otherwise the
+     h1 margin pushes it down and the icon no longer lines up with it. */
+  margin: 1.6rem 0 0.6rem;
+}
+
+.screen-head h1 {
+  margin: 0;
+}
+
+.lift .gear {
+  flex: 0 0 auto;
+  color: grey;
+}
+
+.lift .gear:hover {
+  color: inherit;
+}
+
+/* ---- category checkboxes in the exercise editor ---- */
+.me-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+}
+
+.me-days legend {
+  padding: 0 4px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.72rem;
+  color: grey;
+}
+
+.me-day-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.lift .me-day-box {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--maincolor);
+}

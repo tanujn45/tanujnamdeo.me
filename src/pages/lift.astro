@@ -234,6 +234,7 @@ error: Supabase credentials not set</pre>
   let removeArmed: string | null = null;
   let pickerArmed: string | null = null;
   let days: { id: string; name: string; position: number }[] = [];
+  let exDays = new Map<string, Set<string>>();   // exercise id -> categories
   let mgOpen = new Set<string>();
   let mgEditEx: string | null = null;
   let mgEditDay: string | null = null;
@@ -397,9 +398,10 @@ error: Supabase credentials not set</pre>
     userId = id;
     show("auth", false);
 
-    const [ex, dy, wo, st] = await Promise.all([
+    const [ex, dy, ed, wo, st] = await Promise.all([
       supabase.from("exercises").select("id,name,day,archived").order("name"),
       supabase.from("days").select("id,name,position").order("position"),
+      supabase.from("exercise_days").select("exercise_id,day"),
       supabase.from("workouts").select("id,day,started_at,ended_at")
         .order("started_at", { ascending: false }).limit(300),
       supabase.from("sets")
@@ -413,6 +415,15 @@ error: Supabase credentials not set</pre>
     exercises = (ex.data ?? []) as Exercise[];
     // Categories live in the database now; fall back to the built-in five so
     // the day picker can never come up blank.
+    exDays = new Map();
+    for (const r of (ed.data ?? []) as { exercise_id: string; day: string }[]) {
+      if (!exDays.has(r.exercise_id)) exDays.set(r.exercise_id, new Set());
+      exDays.get(r.exercise_id)!.add(r.day);
+    }
+    // Anything predating the join table still has its single day column.
+    for (const e of exercises) {
+      if (!exDays.has(e.id)) exDays.set(e.id, new Set([e.day]));
+    }
     days = ((dy.data ?? []) as typeof days);
     if (!days.length) days = DAYS.map((n, i) => ({ id: n, name: n, position: i }));
     renderDayButtons();
@@ -495,7 +506,7 @@ error: Supabase credentials not set</pre>
     const w = data as Workout;
     workouts.unshift(w);
 
-    const forDay = exercises.filter((e) => e.day === day && !e.archived);
+    const forDay = exercises.filter((e) => !e.archived && inCategory(e, day));
     if (forDay.length) {
       await supabase.from("workout_exercises").insert(
         forDay.map((e, i) => ({
@@ -751,7 +762,7 @@ error: Supabase credentials not set</pre>
       return;
     }
     host.innerHTML = dayNames().map((d) => {
-      const inDay = live.filter((e) => e.day === d);
+      const inDay = live.filter((e) => inCategory(e, d));
       if (!inDay.length) return "";
       return `<div class="picker-group"><h3>${d}</h3>${inDay
         .map((e) => {
@@ -864,6 +875,9 @@ error: Supabase credentials not set</pre>
       return;
     }
     field.value = "";
+    await supabase.from("exercise_days")
+      .insert({ user_id: userId, exercise_id: (data as Exercise).id, day });
+    exDays.set((data as Exercise).id, new Set([day]));
     exercises.push(data as Exercise);
     exercises.sort((a, b) => a.name.localeCompare(b.name));
     await addToSession(data.id);
@@ -1343,6 +1357,12 @@ error: Supabase credentials not set</pre>
   }
 
   // ------------------------------------------------------------ categories
+  const inCategory = (e: Exercise, day: string) =>
+    (exDays.get(e.id) ?? new Set([e.day])).has(day);
+
+  const categoriesOf = (e: Exercise) =>
+    [...(exDays.get(e.id) ?? new Set([e.day]))];
+
   function dayNames() {
     return days.length ? days.map((d) => d.name) : DAYS;
   }
@@ -1373,7 +1393,7 @@ error: Supabase credentials not set</pre>
     const archived = exercises.filter((e) => e.archived);
 
     $("manage-list").innerHTML = dayNames().map((name) => {
-      const inDay = live.filter((e) => e.day === name);
+      const inDay = live.filter((e) => inCategory(e, name));
       const open = mgOpen.has(name);
 
       // The category header, or its editor in place of it.
@@ -1408,9 +1428,13 @@ error: Supabase credentials not set</pre>
         const used = allSets.some((x) => x.exercise_id === e.id);
         return `<div class="mg-edit">
           <input type="text" class="me-name" value="${esc(e.name)}" aria-label="Exercise name" />
-          <select class="me-day" aria-label="Category">
-            ${dayNames().map((n) => `<option value="${esc(n)}"${n === e.day ? " selected" : ""}>${esc(n)}</option>`).join("")}
-          </select>
+          <fieldset class="me-days">
+            <legend>Categories</legend>
+            ${dayNames().map((n) => `<label class="me-day-opt">
+              <input type="checkbox" class="me-day-box" value="${esc(n)}"${inCategory(e, n) ? " checked" : ""} />
+              <span>${esc(n)}</span>
+            </label>`).join("")}
+          </fieldset>
           <div class="mg-edit-actions">
             <button type="button" class="btn btn-sm me-save" data-id="${e.id}">Save</button>
             <button type="button" class="btn btn-sm me-del" data-id="${e.id}">${used ? "Hide" : "Delete"}</button>
@@ -1468,8 +1492,9 @@ error: Supabase credentials not set</pre>
     on(".md-del", async (b) => { await deleteDayByName(b.dataset.day!); });
     on(".me-save", async (b) => {
       const name = host.querySelector<HTMLInputElement>(".me-name")!.value.trim();
-      const day = host.querySelector<HTMLSelectElement>(".me-day")!.value;
-      await saveExercise(b.dataset.id!, name, day);
+      const picked = [...host.querySelectorAll<HTMLInputElement>(".me-day-box")]
+        .filter((c) => c.checked).map((c) => c.value);
+      await saveExercise(b.dataset.id!, name, picked);
     });
     on(".me-del", async (b) => {
       mgEditEx = null;
@@ -1487,17 +1512,35 @@ error: Supabase credentials not set</pre>
       }));
   }
 
-  async function saveExercise(exId: string, name: string, day: string) {
+  async function saveExercise(exId: string, name: string, picked: string[]) {
     if (!name) return;
+    if (!picked.length) { mSay("Pick at least one category."); return; }
+
     const { error } = await withTimeout(
-      supabase.from("exercises").update({ name, day }).eq("id", exId)
+      // exercises.day keeps the first category so older rows stay sane.
+      supabase.from("exercises").update({ name, day: picked[0] }).eq("id", exId)
     );
     if (error) {
       mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
       return;
     }
+
+    const before = exDays.get(exId) ?? new Set<string>();
+    const added = picked.filter((d) => !before.has(d));
+    const removed = [...before].filter((d) => !picked.includes(d));
+
+    if (added.length) {
+      await supabase.from("exercise_days").insert(
+        added.map((day) => ({ user_id: userId, exercise_id: exId, day }))
+      );
+    }
+    for (const day of removed) {
+      await supabase.from("exercise_days").delete().eq("exercise_id", exId).eq("day", day);
+    }
+
     const e = exercises.find((x) => x.id === exId);
-    if (e) { e.name = name; e.day = day; }
+    if (e) { e.name = name; e.day = picked[0]; }
+    exDays.set(exId, new Set(picked));
     exercises.sort((a, b) => a.name.localeCompare(b.name));
     mgEditEx = null;
     mSay(`Saved ${name}.`);
@@ -1519,6 +1562,8 @@ error: Supabase credentials not set</pre>
       return;
     }
     await supabase.from("exercises").update({ day: newName }).eq("day", oldName);
+    await supabase.from("exercise_days").update({ day: newName }).eq("day", oldName);
+    exDays.forEach((set) => { if (set.delete(oldName)) set.add(newName); });
     await supabase.from("workouts").update({ day: newName }).eq("day", oldName);
 
     row.name = newName;
@@ -1532,6 +1577,8 @@ error: Supabase credentials not set</pre>
   }
 
   async function deleteDayByName(name: string) {
+    await supabase.from("exercise_days").delete().eq("day", name);
+    exDays.forEach((set) => set.delete(name));
     const row = days.find((d) => d.name === name);
     if (!row) return;
     mgEditDay = null;
@@ -1549,6 +1596,9 @@ error: Supabase credentials not set</pre>
       return;
     }
     input.value = "";
+    await supabase.from("exercise_days")
+      .insert({ user_id: userId, exercise_id: (data as Exercise).id, day });
+    exDays.set((data as Exercise).id, new Set([day]));
     exercises.push(data as Exercise);
     exercises.sort((a, b) => a.name.localeCompare(b.name));
     mSay(`Added ${name} to ${day}.`);
@@ -1853,7 +1903,7 @@ error: Supabase credentials not set</pre>
     const withData = exercises.filter((e) => allSets.some((s) => s.exercise_id === e.id));
     sel.innerHTML = '<option value="">Choose an exercise…</option>' +
       dayNames().map((d) => {
-        const inDay = withData.filter((e) => e.day === d);
+        const inDay = withData.filter((e) => inCategory(e, d));
         if (!inDay.length) return "";
         return `<optgroup label="${d}">${inDay
           .map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join("")}</optgroup>`;
