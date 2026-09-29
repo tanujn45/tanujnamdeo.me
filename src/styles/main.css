@@ -904,3 +904,40 @@ header nav a {
     border-radius: 12px;
   }
 }
+
+/* Armed state for the two-tap confirms on Finish and remove. */
+.lift .btn-danger,
+.lift .armed {
+  color: var(--maincolor);
+  border-color: var(--maincolor);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .lift .btn-danger,
+[data-theme="dark"] .lift .armed {
+  color: var(--darkMaincolor);
+  border-color: var(--darkMaincolor);
+}
+
+/* ---- consistency calendar ---- */
+.consistency {
+  margin-top: 2rem;
+}
+
+.consistency h2 {
+  margin-bottom: 0.5rem;
+}
+
+.cal {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  margin: 0 0 8px;
+  padding: 0;
+  overflow-x: auto;
+  background: none;
+  border: none;
+  white-space: pre;
+  color: inherit;
+}

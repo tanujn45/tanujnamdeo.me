@@ -30,6 +30,12 @@ error: Supabase credentials not set</pre>
           <button class="btn day-btn" type="button" data-day={d}>{d}</button>
         ))}
       </div>
+      <section class="consistency">
+        <h2>Consistency</h2>
+        <pre id="cal" class="cal"></pre>
+        <p id="cal-note" class="muted"></p>
+      </section>
+
       <p class="muted">
         <button id="signout" class="linkish" type="button">Sign out</button>
       </p>
@@ -140,6 +146,8 @@ error: Supabase credentials not set</pre>
   let sessionExercises: string[] = [];
   let timerHandle: number | null = null;
   let editing: string | null = null;      // set id being edited
+  let finishArmed = false;
+  let removeArmed: string | null = null;
   let progressChart: Chart | null = null;
 
   function withTimeout<T>(p: PromiseLike<T>, ms = 10000): Promise<T> {
@@ -231,7 +239,27 @@ error: Supabase credentials not set</pre>
       b.addEventListener("click", () => goto(b.dataset.view!))
     );
 
-    $("finish").addEventListener("click", finishWorkout);
+    // Two taps rather than confirm(): a suppressed native dialog returns
+    // false, which made this button look simply dead.
+    $("finish").addEventListener("click", () => {
+      const btn = $("finish");
+      if (!finishArmed) {
+        finishArmed = true;
+        btn.textContent = "Tap to confirm";
+        btn.classList.add("btn-danger");
+        setTimeout(() => {
+          if (!finishArmed) return;
+          finishArmed = false;
+          btn.textContent = "Finish";
+          btn.classList.remove("btn-danger");
+        }, 4000);
+        return;
+      }
+      finishArmed = false;
+      btn.textContent = "Finish";
+      btn.classList.remove("btn-danger");
+      finishWorkout();
+    });
     $("open-picker").addEventListener("click", openPicker);
     $("picker-close").addEventListener("click", () => show("picker", false));
     $("new-exercise-form").addEventListener("submit", onNewExercise);
@@ -284,6 +312,7 @@ error: Supabase credentials not set</pre>
       // An open session owns the Workout tab.
       if (current) { show("view-session"); return; }
       show("view-home");
+      renderCalendar();
     } else if (view === "session") {
       show("view-session");
     } else if (view === "history") {
@@ -334,7 +363,6 @@ error: Supabase credentials not set</pre>
 
   async function finishWorkout() {
     if (!current) return;
-    if (!confirm("Finish this workout?")) return;
     const { error } = await withTimeout(
       supabase.from("workouts").update({ ended_at: new Date().toISOString() })
         .eq("id", current.id)
@@ -443,8 +471,20 @@ error: Supabase credentials not set</pre>
   async function removeExercise(exId: string) {
     if (!current) return;
     const logged = allSets.filter((s) => s.workout_id === current!.id && s.exercise_id === exId);
-    if (logged.length && !confirm(`${nameOf(exId)} has ${logged.length} set(s) today. Remove and delete them?`))
+
+    // Removing something with sets deletes those sets, so make it two taps.
+    if (logged.length && removeArmed !== exId) {
+      removeArmed = exId;
+      renderSession();
+      setTimeout(() => {
+        if (removeArmed !== exId) return;
+        removeArmed = null;
+        renderSession();
+      }, 4000);
       return;
+    }
+    removeArmed = null;
+
     if (logged.length) {
       const { error } = await supabase.from("sets").delete()
         .eq("workout_id", current.id).eq("exercise_id", exId);
@@ -509,7 +549,9 @@ error: Supabase credentials not set</pre>
       return `<section class="ex-card" data-ex="${exId}">
         <header class="ex-head">
           <h2>${esc(ex.name)}</h2>
-          <button type="button" class="linkish remove-ex" data-ex="${exId}">remove</button>
+          <button type="button" class="linkish remove-ex${removeArmed === exId ? " armed" : ""}" data-ex="${exId}">${
+            removeArmed === exId ? `delete ${done.length} set(s)?` : "remove"
+          }</button>
         </header>
         <ul class="set-list">${rows}</ul>
         <p class="hint">${prev
@@ -597,6 +639,58 @@ error: Supabase credentials not set</pre>
     if (error) { say(`Could not delete: ${error.message}`); return; }
     allSets = allSets.filter((s) => s.id !== id);
     renderSession();
+  }
+
+  // ---------------------------------------------------------- consistency
+  // Same block characters the old WakaTime tracker used: light shade for a
+  // rest day, medium for a session, full for a long one.
+  const keyOf = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  function renderCalendar() {
+    const WEEKS = 12;
+    const counts = new Map<string, number>();
+    for (const st of allSets) {
+      const k = dayKey(st.performed_at);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Weeks run Monday-first, so shift Sunday (0) to the end.
+    const dow = (today.getDay() + 6) % 7;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - dow);
+    const start = new Date(monday);
+    start.setDate(monday.getDate() - (WEEKS - 1) * 7);
+
+    const labels = ["M", "T", "W", "T", "F", "S", "S"];
+    const lines: string[] = [];
+    let trained = 0;
+    let last28 = 0;
+    let thisWeek = 0;
+
+    for (let r = 0; r < 7; r++) {
+      let line = labels[r] + " ";
+      for (let c = 0; c < WEEKS; c++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + c * 7 + r);
+        if (d > today) { line += "  "; continue; }
+        const n = counts.get(keyOf(d)) ?? 0;
+        line += (n === 0 ? "░" : n >= 6 ? "█" : "▓") + " ";
+        if (n > 0) {
+          trained++;
+          if (c === WEEKS - 1) thisWeek++;
+          if ((today.getTime() - d.getTime()) / 86400000 < 28) last28++;
+        }
+      }
+      lines.push(line.trimEnd());
+    }
+
+    $("cal").textContent = lines.join("\n");
+    $("cal-note").textContent = trained
+      ? `${trained} ${trained === 1 ? "day" : "days"} in 12 weeks · ${last28} in the last 4 · ${thisWeek} this week`
+      : "No sessions logged yet.";
   }
 
   // -------------------------------------------------------------- history
