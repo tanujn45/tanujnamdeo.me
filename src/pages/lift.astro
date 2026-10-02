@@ -41,6 +41,28 @@ error: Supabase credentials not set</pre>
           </svg>
         </button>
       </div>
+      <section class="today-card">
+        <div class="today-row">
+          <label class="today-field">
+            <span>Steps</span>
+            <input type="number" id="in-steps" inputmode="numeric" min="0" step="1" placeholder="—" />
+          </label>
+          <label class="today-field">
+            <span>Weight</span>
+            <input type="number" id="in-weight" inputmode="decimal" min="0" step="0.1" placeholder="—" />
+          </label>
+          <label class="today-field today-unit">
+            <span>Unit</span>
+            <select id="in-weight-unit">
+              <option value="lbs">lbs</option>
+              <option value="kg">kg</option>
+            </select>
+          </label>
+        </div>
+        <button id="save-today" class="btn btn-wide" type="button">Save today</button>
+        <p id="today-msg" class="muted" role="status"></p>
+      </section>
+
       <div id="start-confirm" class="start-confirm" hidden>
         <p id="start-q"></p>
         <div class="start-actions">
@@ -113,6 +135,14 @@ error: Supabase credentials not set</pre>
       <div id="sum-tiles" class="sum-tiles"></div>
       <p id="sum-verdict" class="sum-verdict"></p>
       <canvas id="sum-chart" height="150"></canvas>
+      <h2>Steps</h2>
+      <canvas id="steps-chart" height="170"></canvas>
+      <p id="steps-msg" class="muted"></p>
+
+      <h2>Weight</h2>
+      <canvas id="weight-chart" height="170"></canvas>
+      <p id="weight-msg" class="muted"></p>
+
       <h2>By exercise</h2>
       <div id="sum-exercises"></div>
       <button id="sum-done" class="btn btn-primary btn-wide" type="button">Done</button>
@@ -158,6 +188,14 @@ error: Supabase credentials not set</pre>
       </select>
       <canvas id="overall-chart" height="200"></canvas>
       <p id="overall-msg" class="muted"></p>
+
+      <h2>Steps</h2>
+      <canvas id="steps-chart" height="170"></canvas>
+      <p id="steps-msg" class="muted"></p>
+
+      <h2>Weight</h2>
+      <canvas id="weight-chart" height="170"></canvas>
+      <p id="weight-msg" class="muted"></p>
 
       <h2>By exercise</h2>
       <select id="progress-exercise" class="wide">
@@ -287,6 +325,10 @@ error: Supabase credentials not set</pre>
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
   let sumChart: Chart | null = null;
+  let stepsChart: Chart | null = null;
+  let weightChart: Chart | null = null;
+  type Daily = { day: string; metric: "steps" | "weight"; value: number; unit: string | null };
+  let daily: Daily[] = [];
   let summaryOrigin: "home" | "history" = "home";
   let summaryId: string | null = null;
   let sumDelArmed = false;
@@ -432,6 +474,7 @@ error: Supabase credentials not set</pre>
       if (d) startWorkout(d);
     });
     $("start-no").addEventListener("click", cancelStart);
+    $("save-today").addEventListener("click", saveToday);
     $("finish").addEventListener("click", openFinishPanel);
     $("finish-cancel").addEventListener("click", closeFinishPanel);
     $("finish-save").addEventListener("click", () => { closeFinishPanel(); finishWorkout(); });
@@ -475,10 +518,12 @@ error: Supabase credentials not set</pre>
     setSiteName(email);
     show("auth", false);
 
-    const [ex, dy, ed, wo, st] = await Promise.all([
+    const [ex, dy, ed, de, wo, st] = await Promise.all([
       supabase.from("exercises").select("id,name,day,archived").order("name"),
       supabase.from("days").select("id,name,position").order("position"),
       supabase.from("exercise_days").select("exercise_id,day"),
+      supabase.from("daily_entries").select("day,metric,value,unit")
+        .order("day", { ascending: false }).limit(1000),
       supabase.from("workouts").select("id,day,started_at,ended_at")
         .order("started_at", { ascending: false }).limit(300),
       supabase.from("sets")
@@ -492,6 +537,7 @@ error: Supabase credentials not set</pre>
     exercises = (ex.data ?? []) as Exercise[];
     // Categories live in the database now; fall back to the built-in five so
     // the day picker can never come up blank.
+    daily = ((de.data ?? []) as Daily[]).map((r) => ({ ...r, value: Number(r.value) }));
     exDays = new Map();
     for (const r of (ed.data ?? []) as { exercise_id: string; day: string }[]) {
       if (!exDays.has(r.exercise_id)) exDays.set(r.exercise_id, new Set());
@@ -543,6 +589,7 @@ error: Supabase credentials not set</pre>
       if (current) { show("view-session"); return; }
       show("view-home");
       cancelStart();
+      renderToday();
       $("home-date").textContent = new Date().toLocaleDateString(undefined, {
         weekday: "long", month: "short", day: "numeric",
       });
@@ -555,6 +602,8 @@ error: Supabase credentials not set</pre>
     } else if (view === "progress") {
       show("view-progress");
       renderOverall();
+      renderStepsChart();
+      renderWeightChart();
       renderProgressPicker();
       renderProgress();
     } else if (view === "manage") {
@@ -1504,6 +1553,192 @@ error: Supabase credentials not set</pre>
         localStorage.removeItem("lift:restEnd");
       }
     } catch (e) {}
+  }
+
+  // ------------------------------------------------------- steps & weight
+  const todayKey = () => keyOf(new Date());
+  const entryFor = (metric: string, day: string) =>
+    daily.find((d) => d.metric === metric && d.day === day);
+
+  function renderToday() {
+    const k = todayKey();
+    const steps = entryFor("steps", k);
+    const weight = entryFor("weight", k);
+    (<HTMLInputElement>$("in-steps")).value = steps ? String(Math.round(steps.value)) : "";
+    (<HTMLInputElement>$("in-weight")).value = weight ? String(weight.value) : "";
+    const unitSel = <HTMLSelectElement>$("in-weight-unit");
+    unitSel.value = weight?.unit ?? localStorage.getItem("lift:wunit") ?? "lbs";
+    $("today-msg").textContent =
+      steps || weight ? "Logged for today. Change it and save again." : "";
+  }
+
+  async function saveToday() {
+    const k = todayKey();
+    const stepsRaw = (<HTMLInputElement>$("in-steps")).value.trim();
+    const weightRaw = (<HTMLInputElement>$("in-weight")).value.trim();
+    const unit = (<HTMLSelectElement>$("in-weight-unit")).value;
+
+    const rows: any[] = [];
+    if (stepsRaw !== "") {
+      const v = Math.round(parseFloat(stepsRaw));
+      if (!(v >= 0)) { $("today-msg").textContent = "Steps must be a number."; return; }
+      rows.push({ user_id: userId, day: k, metric: "steps", value: v, unit: null });
+    }
+    if (weightRaw !== "") {
+      const v = parseFloat(weightRaw);
+      if (!(v > 0)) { $("today-msg").textContent = "Weight must be a number."; return; }
+      rows.push({ user_id: userId, day: k, metric: "weight", value: v, unit });
+    }
+    if (!rows.length) { $("today-msg").textContent = "Nothing to save."; return; }
+
+    let error: any;
+    try {
+      // One row per day per metric, so saving again edits rather than adds.
+      ({ error } = await withTimeout(
+        supabase.from("daily_entries")
+          .upsert(rows, { onConflict: "user_id,day,metric" })
+      ));
+    } catch (err) {
+      $("today-msg").textContent = `Error: ${(err as Error).message}`;
+      return;
+    }
+    if (error) { $("today-msg").textContent = `Error: ${error.message}`; return; }
+
+    for (const r of rows) {
+      const i = daily.findIndex((d) => d.metric === r.metric && d.day === r.day);
+      const row = { day: r.day, metric: r.metric, value: r.value, unit: r.unit };
+      if (i >= 0) daily[i] = row; else daily.unshift(row as Daily);
+    }
+    localStorage.setItem("lift:wunit", unit);
+    $("today-msg").textContent = "Saved.";
+    renderCalendar();
+  }
+
+  // A rolling mean over the charted window; a single flat day should not
+  // look like a collapse.
+  function rollingMean(values: (number | null)[], window = 7): (number | null)[] {
+    return values.map((_, i) => {
+      const slice = values.slice(Math.max(0, i - window + 1), i + 1)
+        .filter((v): v is number => v !== null);
+      if (!slice.length) return null;
+      return Math.round((slice.reduce((a, b) => a + b, 0) / slice.length) * 10) / 10;
+    });
+  }
+
+  // Every day in the range, so gaps read as gaps rather than being closed up.
+  function daySpan(days: number): string[] {
+    const out: string[] = [];
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (days - 1));
+    for (let i = 0; i < days; i++) {
+      out.push(keyOf(d));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
+  function renderStepsChart() {
+    const canvas = <HTMLCanvasElement>$("steps-chart");
+    const rows = daily.filter((d) => d.metric === "steps");
+    if (!rows.length) {
+      stepsChart?.destroy(); stepsChart = null;
+      canvas.style.display = "none";
+      $("steps-msg").textContent = "No steps logged yet.";
+      return;
+    }
+    canvas.style.display = "";
+
+    const span = daySpan(30);
+    const byDay = new Map(rows.map((r) => [r.day, r.value]));
+    const values = span.map((k) => byDay.get(k) ?? null);
+    const avg = rollingMean(values);
+
+    const logged = values.filter((v): v is number => v !== null);
+    const mean = Math.round(logged.reduce((a, b) => a + b, 0) / logged.length);
+    const best = Math.max(...rows.map((r) => r.value));
+
+    stepsChart?.destroy();
+    const ink = getComputedStyle(document.documentElement).color;
+    stepsChart = new Chart(canvas, {
+      data: {
+        labels: span.map(fmtDayKey),
+        datasets: [
+          { type: "bar", label: "Steps", data: values, backgroundColor: accentFill(0.45) },
+          { type: "line", label: "7-day average", data: avg, borderColor: ink,
+            borderWidth: 2, pointRadius: 0, tension: 0.3, spanGaps: true },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: ink, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { color: ink, maxTicksLimit: 6 }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: ink },
+               grid: { color: "rgba(128,128,128,.2)" } },
+        },
+      },
+    });
+
+    $("steps-msg").textContent =
+      `${plural(logged.length, "day")} logged in the last 30 · ${mean.toLocaleString()} average · best ${Math.round(best).toLocaleString()}`;
+  }
+
+  function renderWeightChart() {
+    const canvas = <HTMLCanvasElement>$("weight-chart");
+    const rows = daily.filter((d) => d.metric === "weight");
+    if (!rows.length) {
+      weightChart?.destroy(); weightChart = null;
+      canvas.style.display = "none";
+      $("weight-msg").textContent = "No weigh-ins yet.";
+      return;
+    }
+    canvas.style.display = "";
+
+    // Mixed units on one axis would be meaningless, so chart the dominant one.
+    const kg = rows.filter((r) => r.unit === "kg").length;
+    const unit = kg > rows.length - kg ? "kg" : "lbs";
+    const inUnit = rows.filter((r) => (r.unit ?? "lbs") === unit);
+    const dropped = rows.length - inUnit.length;
+
+    const span = daySpan(90);
+    const byDay = new Map(inUnit.map((r) => [r.day, r.value]));
+    const values = span.map((k) => byDay.get(k) ?? null);
+    const avg = rollingMean(values);
+
+    weightChart?.destroy();
+    const ink = getComputedStyle(document.documentElement).color;
+    weightChart = new Chart(canvas, {
+      data: {
+        labels: span.map(fmtDayKey),
+        datasets: [
+          { type: "line", label: `Weight (${unit})`, data: values, borderColor: accent(),
+            backgroundColor: accentFill(0.12), pointRadius: 2, tension: 0.25,
+            spanGaps: true, fill: true },
+          { type: "line", label: "7-day average", data: avg, borderColor: ink,
+            borderWidth: 2, pointRadius: 0, tension: 0.3, spanGaps: true },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: ink, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { color: ink, maxTicksLimit: 6 }, grid: { display: false } },
+          // Not beginAtZero: body weight varies in a narrow band and a zero
+          // baseline would flatten every change out of existence.
+          y: { ticks: { color: ink }, grid: { color: "rgba(128,128,128,.2)" } },
+        },
+      },
+    });
+
+    const sorted = [...inUnit].sort((a, b) => (a.day < b.day ? -1 : 1));
+    const first = sorted[0], last = sorted[sorted.length - 1];
+    const change = last.value - first.value;
+    const dir = change > 0 ? "up" : change < 0 ? "down" : "level";
+    $("weight-msg").textContent =
+      `${plural(inUnit.length, "weigh-in")} · now ${last.value}${unit} · ` +
+      `${dir === "level" ? "level" : `${dir} ${Math.abs(Math.round(change * 10) / 10)}${unit}`} since ${fmtDayKey(first.day)}` +
+      (dropped ? ` · ${dropped} in the other unit not shown` : "");
   }
 
   // ------------------------------------------------------------ categories

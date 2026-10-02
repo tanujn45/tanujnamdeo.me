@@ -1773,3 +1773,49 @@ header nav a {
   border-color: var(--maincolor);
   border-width: 2px;
 }
+
+/* ---- today's steps and weight ---- */
+.today-card {
+  padding: 12px;
+  margin: 1rem 0 0;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 6px;
+}
+
+.today-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 84px;
+  gap: 8px;
+}
+
+.today-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.today-field > span {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.72rem;
+  color: grey;
+}
+
+.today-card .btn {
+  margin-top: 10px;
+}
+
+.today-card .muted {
+  margin: 8px 0 0;
+}
+
+#steps-chart,
+#weight-chart {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  max-width: 100%;
+  max-height: 190px;
+  margin: 0.5rem 0 0.25rem;
+}
