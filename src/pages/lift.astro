@@ -42,6 +42,10 @@ error: Supabase credentials not set</pre>
         </button>
       </div>
       <section class="today-card">
+        <label class="today-date">
+          <span>Date</span>
+          <input type="date" id="in-date" />
+        </label>
         <div class="today-row">
           <label class="today-field">
             <span>Steps</span>
@@ -59,7 +63,7 @@ error: Supabase credentials not set</pre>
             </select>
           </label>
         </div>
-        <button id="save-today" class="btn btn-wide" type="button">Save today</button>
+        <button id="save-today" class="btn btn-wide" type="button">Save</button>
         <p id="today-msg" class="muted" role="status"></p>
       </section>
 
@@ -139,13 +143,17 @@ error: Supabase credentials not set</pre>
       <div id="sum-tiles" class="sum-tiles"></div>
       <p id="sum-verdict" class="sum-verdict"></p>
       <canvas id="sum-chart" height="150"></canvas>
-      <h2>Steps</h2>
-      <canvas id="steps-chart" height="170"></canvas>
-      <p id="steps-msg" class="muted"></p>
+      <div id="sum-steps-block">
+        <h2>Steps</h2>
+        <canvas id="sum-steps-chart" height="170"></canvas>
+        <p id="sum-steps-msg" class="muted"></p>
+      </div>
 
-      <h2>Weight</h2>
-      <canvas id="weight-chart" height="170"></canvas>
-      <p id="weight-msg" class="muted"></p>
+      <div id="sum-weight-block">
+        <h2>Weight</h2>
+        <canvas id="sum-weight-chart" height="170"></canvas>
+        <p id="sum-weight-msg" class="muted"></p>
+      </div>
 
       <h2>By exercise</h2>
       <div id="sum-exercises"></div>
@@ -329,8 +337,9 @@ error: Supabase credentials not set</pre>
   let progressChart: Chart | null = null;
   let overallChart: Chart | null = null;
   let sumChart: Chart | null = null;
-  let stepsChart: Chart | null = null;
-  let weightChart: Chart | null = null;
+  // The Progress tab and a workout's detail both chart steps and weight, so
+  // the element ids carry a prefix and each canvas keeps its own instance.
+  const dailyCharts: Record<string, Chart | null> = {};
   type Daily = { day: string; metric: "steps" | "weight"; value: number; unit: string | null };
   let daily: Daily[] = [];
   let summaryOrigin: "home" | "history" = "home";
@@ -484,6 +493,7 @@ error: Supabase credentials not set</pre>
     });
     $("start-no").addEventListener("click", cancelStart);
     $("save-today").addEventListener("click", saveToday);
+    $("in-date").addEventListener("change", fillDaily);
     $("finish").addEventListener("click", openFinishPanel);
     $("finish-cancel").addEventListener("click", closeFinishPanel);
     $("finish-save").addEventListener("click", () => { closeFinishPanel(); finishWorkout(); });
@@ -839,6 +849,10 @@ error: Supabase credentials not set</pre>
             : `Same volume as your last ${esc(w.day)}.`;
 
     renderSummaryChart(w.day, unit, id);
+    // A heading over an empty canvas reads as a bug, so the section goes
+    // entirely when that metric has nothing logged.
+    show("sum-steps-block", renderStepsChart("sum-steps"));
+    show("sum-weight-block", renderWeightChart("sum-weight"));
     renderSummaryExercises(rows, prevRows, unit, prev);
     goto("summary");
   }
@@ -1589,20 +1603,39 @@ error: Supabase credentials not set</pre>
   const entryFor = (metric: string, day: string) =>
     daily.find((d) => d.metric === metric && d.day === day);
 
+  // Which day the card is editing. Defaults to today; change the date to
+  // fill in a day you missed.
+  const dailyDay = () => {
+    const picked = (<HTMLInputElement>$("in-date")).value;
+    return picked || todayKey();
+  };
+
   function renderToday() {
-    const k = todayKey();
+    const d = <HTMLInputElement>$("in-date");
+    d.value = todayKey();
+    d.max = todayKey();
+    fillDaily();
+  }
+
+  // Shows what is already stored for the chosen day, so saving edits that day
+  // rather than silently adding a second figure.
+  function fillDaily() {
+    const k = dailyDay();
     const steps = entryFor("steps", k);
     const weight = entryFor("weight", k);
     (<HTMLInputElement>$("in-steps")).value = steps ? String(Math.round(steps.value)) : "";
     (<HTMLInputElement>$("in-weight")).value = weight ? String(weight.value) : "";
     const unitSel = <HTMLSelectElement>$("in-weight-unit");
     unitSel.value = weight?.unit ?? localStorage.getItem("lift:wunit") ?? "lbs";
+    const when = k === todayKey() ? "today" : fmtDayKey(k);
+    $("save-today").textContent = k === todayKey() ? "Save" : `Save for ${fmtDayKey(k)}`;
     $("today-msg").textContent =
-      steps || weight ? "Logged for today. Change it and save again." : "";
+      steps || weight ? `Logged for ${when}. Change it and save again.` : "";
   }
 
   async function saveToday() {
-    const k = todayKey();
+    const k = dailyDay();
+    if (k > todayKey()) { $("today-msg").textContent = "That day hasn't happened yet."; return; }
     const stepsRaw = (<HTMLInputElement>$("in-steps")).value.trim();
     const weightRaw = (<HTMLInputElement>$("in-weight")).value.trim();
     const unit = (<HTMLSelectElement>$("in-weight-unit")).value;
@@ -1639,7 +1672,8 @@ error: Supabase credentials not set</pre>
       if (i >= 0) daily[i] = row; else daily.unshift(row as Daily);
     }
     localStorage.setItem("lift:wunit", unit);
-    $("today-msg").textContent = "Saved.";
+    $("today-msg").textContent =
+      k === todayKey() ? "Saved." : `Saved for ${fmtDayKey(k)}.`;
     renderCalendar();
   }
 
@@ -1667,14 +1701,16 @@ error: Supabase credentials not set</pre>
     return out;
   }
 
-  function renderStepsChart() {
-    const canvas = <HTMLCanvasElement>$("steps-chart");
+  // Returns whether there was anything to chart, so a caller can drop the
+  // whole section rather than leave a heading standing over nothing.
+  function renderStepsChart(prefix = "steps"): boolean {
+    const canvas = <HTMLCanvasElement>$(`${prefix}-chart`);
     const rows = daily.filter((d) => d.metric === "steps");
     if (!rows.length) {
-      stepsChart?.destroy(); stepsChart = null;
+      dailyCharts[prefix]?.destroy(); dailyCharts[prefix] = null;
       canvas.style.display = "none";
-      $("steps-msg").textContent = "No steps logged yet.";
-      return;
+      $(`${prefix}-msg`).textContent = "No steps logged yet.";
+      return false;
     }
     canvas.style.display = "";
 
@@ -1687,9 +1723,9 @@ error: Supabase credentials not set</pre>
     const mean = Math.round(logged.reduce((a, b) => a + b, 0) / logged.length);
     const best = Math.max(...rows.map((r) => r.value));
 
-    stepsChart?.destroy();
+    dailyCharts[prefix]?.destroy();
     const ink = getComputedStyle(document.documentElement).color;
-    stepsChart = new Chart(canvas, {
+    dailyCharts[prefix] = new Chart(canvas, {
       data: {
         labels: span.map(fmtDayKey),
         datasets: [
@@ -1709,18 +1745,19 @@ error: Supabase credentials not set</pre>
       },
     });
 
-    $("steps-msg").textContent =
+    $(`${prefix}-msg`).textContent =
       `${plural(logged.length, "day")} logged in the last 30 · ${mean.toLocaleString()} average · best ${Math.round(best).toLocaleString()}`;
+    return true;
   }
 
-  function renderWeightChart() {
-    const canvas = <HTMLCanvasElement>$("weight-chart");
+  function renderWeightChart(prefix = "weight"): boolean {
+    const canvas = <HTMLCanvasElement>$(`${prefix}-chart`);
     const rows = daily.filter((d) => d.metric === "weight");
     if (!rows.length) {
-      weightChart?.destroy(); weightChart = null;
+      dailyCharts[prefix]?.destroy(); dailyCharts[prefix] = null;
       canvas.style.display = "none";
-      $("weight-msg").textContent = "No weigh-ins yet.";
-      return;
+      $(`${prefix}-msg`).textContent = "No weigh-ins yet.";
+      return false;
     }
     canvas.style.display = "";
 
@@ -1735,9 +1772,9 @@ error: Supabase credentials not set</pre>
     const values = span.map((k) => byDay.get(k) ?? null);
     const avg = rollingMean(values);
 
-    weightChart?.destroy();
+    dailyCharts[prefix]?.destroy();
     const ink = getComputedStyle(document.documentElement).color;
-    weightChart = new Chart(canvas, {
+    dailyCharts[prefix] = new Chart(canvas, {
       data: {
         labels: span.map(fmtDayKey),
         datasets: [
@@ -1764,10 +1801,11 @@ error: Supabase credentials not set</pre>
     const first = sorted[0], last = sorted[sorted.length - 1];
     const change = last.value - first.value;
     const dir = change > 0 ? "up" : change < 0 ? "down" : "level";
-    $("weight-msg").textContent =
+    $(`${prefix}-msg`).textContent =
       `${plural(inUnit.length, "weigh-in")} · now ${last.value}${unit} · ` +
       `${dir === "level" ? "level" : `${dir} ${Math.abs(Math.round(change * 10) / 10)}${unit}`} since ${fmtDayKey(first.day)}` +
       (dropped ? ` · ${dropped} in the other unit not shown` : "");
+    return true;
   }
 
   // ------------------------------------------------------------ categories

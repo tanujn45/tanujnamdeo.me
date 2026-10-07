@@ -1788,6 +1788,24 @@ header nav a {
   gap: 8px;
 }
 
+.today-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.today-date > span {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.72rem;
+  color: grey;
+}
+
+.lift .today-date input {
+  flex: 1;
+  min-width: 0;
+}
+
 .today-field {
   display: flex;
   flex-direction: column;
@@ -1810,7 +1828,9 @@ header nav a {
 }
 
 #steps-chart,
-#weight-chart {
+#weight-chart,
+#sum-steps-chart,
+#sum-weight-chart {
   position: static;
   left: auto;
   top: auto;
