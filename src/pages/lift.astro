@@ -708,10 +708,10 @@ error: Supabase credentials not set</pre>
     if (!current) return;
     discardArmed = false;
     const rows = allSets.filter((x) => x.workout_id === current!.id);
-    const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
+    const volume = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
     const mins = Math.round((Date.now() - +new Date(current.started_at)) / 60000);
     $("finish-summary").textContent =
-      `${plural(rows.length, "set")} · ${vol} vol · ${mins} min`;
+      `${plural(rows.length, "set")} · ${volume} vol · ${mins} min`;
     const d = $("finish-discard");
     d.textContent = rows.length ? `Discard ${rows.length}` : "Discard";
     d.classList.remove("armed");
@@ -804,7 +804,7 @@ error: Supabase credentials not set</pre>
     const mins = w.ended_at
       ? Math.max(1, Math.round((+new Date(w.ended_at) - +new Date(w.started_at)) / 60000))
       : 0;
-    const vol = volOf(rows);
+    const volume = volOf(rows);
     const prs = rows.filter(isPR).length;
 
     // The previous session of this same category that actually had sets.
@@ -818,13 +818,13 @@ error: Supabase credentials not set</pre>
     $("sum-title").textContent = origin === "history" ? w.day : `${w.day} done`;
     $("sum-meta").textContent = `${fmtDate(w.started_at)} · ${mins} min`;
 
-    const delta = prev && prevVol ? Math.round(((vol - prevVol) / prevVol) * 100) : null;
+    const delta = prev && prevVol ? Math.round(((volume - prevVol) / prevVol) * 100) : null;
     const tile = (big: string, small: string) =>
       `<div class="sum-tile"><span class="sum-big">${big}</span><span class="sum-small">${small}</span></div>`;
 
     $("sum-tiles").innerHTML =
       tile(String(rows.length), plural(rows.length, "set").replace(/^\d+ /, "")) +
-      tile(String(vol), `volume (${unit})`) +
+      tile(String(volume), `volume (${unit})`) +
       tile(String(new Set(rows.map((r) => r.exercise_id)).size), "exercises") +
       (prs ? tile(String(prs), plural(prs, "PR").replace(/^\d+ /, "")) : "");
 
@@ -927,7 +927,7 @@ error: Supabase credentials not set</pre>
     $("sum-exercises").innerHTML = ids.map((exId) => {
       const mine = rows.filter((r) => r.exercise_id === exId);
       const theirs = prevRows.filter((r) => r.exercise_id === exId);
-      const vol = Math.round(mine.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0));
+      const volume = Math.round(mine.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0));
       const pVol = Math.round(theirs.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0));
       const best = Math.max(...mine.map((r) => r.weight));
       const gotPR = mine.some(isPR);
@@ -936,7 +936,7 @@ error: Supabase credentials not set</pre>
       if (!prev) note = '<span class="muted">first time</span>';
       else if (!theirs.length) note = '<span class="muted">new this session</span>';
       else if (pVol) {
-        const d = Math.round(((vol - pVol) / pVol) * 100);
+        const d = Math.round(((volume - pVol) / pVol) * 100);
         note = d > 0 ? `<span class="up">▲ ${d}%</span>`
              : d < 0 ? `<span class="down">▼ ${Math.abs(d)}%</span>`
              : '<span class="muted">level</span>';
@@ -944,7 +944,7 @@ error: Supabase credentials not set</pre>
 
       return `<div class="sum-row">
         <span class="sum-name">${esc(nameOf(exId))}${gotPR ? CAT : ""}</span>
-        <span class="sum-nums">${plural(mine.length, "set")} · top ${best}${unit} · ${vol} vol ${note}</span>
+        <span class="sum-nums">${plural(mine.length, "set")} · top ${best}${unit} · ${volume} vol ${note}</span>
       </div>`;
     }).join("");
   }
@@ -2212,13 +2212,13 @@ error: Supabase credentials not set</pre>
         .sort((a, b) => +new Date(a.started_at) - +new Date(b.started_at))
         .map((w) => {
           const rows = allSets.filter((s) => s.workout_id === w.id);
-          const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
+          const volume = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
           const time = new Date(w.started_at).toLocaleTimeString(undefined, {
             hour: "numeric", minute: "2-digit",
           });
           return `<button type="button" class="hist-row" data-w="${w.id}">
             <span class="hist-day">${esc(w.day)}</span>
-            <span class="hist-meta">${time} · ${plural(rows.length, "set")} · ${vol} vol</span>
+            <span class="hist-meta">${time} · ${plural(rows.length, "set")} · ${volume} vol</span>
           </button>`;
         })
         .join("");
@@ -2328,11 +2328,11 @@ error: Supabase credentials not set</pre>
     }
     $("history-list").innerHTML = done.map((w) => {
       const rows = allSets.filter((s) => s.workout_id === w.id);
-      const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
+      const volume = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
       const mins = Math.round((+new Date(w.ended_at!) - +new Date(w.started_at)) / 60000);
       return `<button type="button" class="hist-row" data-w="${w.id}">
         <span class="hist-day">${esc(w.day)}</span>
-        <span class="hist-meta">${fmtDate(w.started_at)} · ${plural(rows.length, "set")} · ${vol} vol · ${mins} min</span>
+        <span class="hist-meta">${fmtDate(w.started_at)} · ${plural(rows.length, "set")} · ${volume} vol · ${mins} min</span>
       </button>`;
     }).join("");
 
