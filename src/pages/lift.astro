@@ -49,7 +49,7 @@ error: Supabase credentials not set</pre>
           </label>
           <label class="today-field">
             <span>Weight</span>
-            <input type="number" id="in-weight" inputmode="decimal" min="0" step="0.1" placeholder="—" />
+            <input type="number" id="in-weight" inputmode="decimal" step="any" placeholder="—" />
           </label>
           <label class="today-field today-unit">
             <span>Unit</span>
@@ -65,6 +65,10 @@ error: Supabase credentials not set</pre>
 
       <div id="start-confirm" class="start-confirm" hidden>
         <p id="start-q"></p>
+        <label class="start-when">
+          <span>Date</span>
+          <input type="date" id="start-date" />
+        </label>
         <div class="start-actions">
           <button id="start-yes" class="btn btn-primary" type="button">Start</button>
           <button id="start-no" class="btn" type="button">Cancel</button>
@@ -288,7 +292,7 @@ error: Supabase credentials not set</pre>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!
     );
 
-  type Exercise = { id: string; name: string; day: string; archived: boolean };
+  type Exercise = { id: string; name: string; day: string; archived: boolean; notes?: string | null };
   type Workout = { id: string; day: string; started_at: string; ended_at: string | null };
   type SetRow = {
     id: string; workout_id: string; exercise_id: string; set_number: number;
@@ -359,6 +363,10 @@ error: Supabase credentials not set</pre>
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
   };
   const e1rm = (w: number, r: number) => w * (1 + r / 30);
+  // Assisted work carries a negative load. It still ranks correctly for
+  // records (less assistance scores higher), but it moves no weight, so it
+  // contributes nothing to volume rather than subtracting from it.
+  const vol = (w: number, r: number) => Math.max(0, w) * r;
   // Local date, not UTC: toISOString() would push an evening Pacific workout
   // onto the next calendar day and group it wrongly on the chart.
   const dayKey = (iso: string) => {
@@ -470,8 +478,9 @@ error: Supabase credentials not set</pre>
 
     $("start-yes").addEventListener("click", () => {
       const d = pendingDay;
+      const when = (<HTMLInputElement>$("start-date")).value;
       cancelStart();
-      if (d) startWorkout(d);
+      if (d) startWorkout(d, when);
     });
     $("start-no").addEventListener("click", cancelStart);
     $("save-today").addEventListener("click", saveToday);
@@ -519,7 +528,7 @@ error: Supabase credentials not set</pre>
     show("auth", false);
 
     const [ex, dy, ed, de, wo, st] = await Promise.all([
-      supabase.from("exercises").select("id,name,day,archived").order("name"),
+      supabase.from("exercises").select("id,name,day,archived,notes").order("name"),
       supabase.from("days").select("id,name,position").order("position"),
       supabase.from("exercise_days").select("exercise_id,day"),
       supabase.from("daily_entries").select("day,metric,value,unit")
@@ -624,6 +633,10 @@ error: Supabase credentials not set</pre>
   function askStart(day: string) {
     pendingDay = day;
     $("start-q").textContent = `Start a ${day} workout?`;
+    // Defaults to today; change it to log a session you did earlier.
+    const d = <HTMLInputElement>$("start-date");
+    d.value = keyOf(new Date());
+    d.max = keyOf(new Date());
     show("start-confirm");
     document.querySelectorAll<HTMLButtonElement>(".day-btn").forEach((b) =>
       b.classList.toggle("day-btn-on", b.dataset.day === day));
@@ -637,10 +650,15 @@ error: Supabase credentials not set</pre>
       .forEach((b) => b.classList.remove("day-btn-on"));
   }
 
-  async function startWorkout(day: string) {
+  async function startWorkout(day: string, when?: string) {
     if (!dayNames().includes(day)) return;
+    const today = keyOf(new Date());
+    const backdated = when && when !== today ? when : null;
+    const startedAt = backdated ? new Date(`${backdated}T12:00:00`).toISOString() : undefined;
+
     const { data, error } = await withTimeout(
-      supabase.from("workouts").insert({ day, user_id: userId })
+      supabase.from("workouts")
+        .insert(startedAt ? { day, user_id: userId, started_at: startedAt } : { day, user_id: userId })
         .select("id,day,started_at,ended_at").single()
     );
     if (error) {
@@ -690,7 +708,7 @@ error: Supabase credentials not set</pre>
     if (!current) return;
     discardArmed = false;
     const rows = allSets.filter((x) => x.workout_id === current!.id);
-    const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+    const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
     const mins = Math.round((Date.now() - +new Date(current.started_at)) / 60000);
     $("finish-summary").textContent =
       `${plural(rows.length, "set")} · ${vol} vol · ${mins} min`;
@@ -744,14 +762,19 @@ error: Supabase credentials not set</pre>
 
   async function finishWorkout() {
     if (!current) return;
+    // A session logged for an earlier date has no meaningful duration, so
+    // close it at its own start rather than claiming days of elapsed time.
+    const startedMs = +new Date(current.started_at);
+    const endedAt = Date.now() - startedMs > 24 * 3600 * 1000
+      ? new Date(startedMs).toISOString()
+      : new Date().toISOString();
     const { error } = await withTimeout(
-      supabase.from("workouts").update({ ended_at: new Date().toISOString() })
-        .eq("id", current.id)
+      supabase.from("workouts").update({ ended_at: endedAt }).eq("id", current.id)
     );
     if (error) { say(`Could not finish: ${error.message}`); return; }
     const finishedId = current.id;
     const w = workouts.find((x) => x.id === finishedId);
-    if (w) w.ended_at = new Date().toISOString();
+    if (w) w.ended_at = endedAt;
     current = null;
     stopTimer();
     showSummary(finishedId);
@@ -776,7 +799,7 @@ error: Supabase credentials not set</pre>
     const unit = unitOf(rows);
     const volOf = (list: SetRow[]) =>
       Math.round(list.filter((r) => r.unit === unit)
-        .reduce((t, r) => t + r.weight * r.reps, 0));
+        .reduce((t, r) => t + vol(r.weight, r.reps), 0));
 
     const mins = w.ended_at
       ? Math.max(1, Math.round((+new Date(w.ended_at) - +new Date(w.started_at)) / 60000))
@@ -876,7 +899,7 @@ error: Supabase credentials not set</pre>
     const labels = sessions.map((x) => fmtDayKey(dayKey(x.started_at)));
     const values = sessions.map((x) =>
       Math.round(allSets.filter((r) => r.workout_id === x.id && r.unit === unit)
-        .reduce((t, r) => t + r.weight * r.reps, 0)));
+        .reduce((t, r) => t + vol(r.weight, r.reps), 0)));
     // Highlight the session just finished.
     const colours = sessions.map((x) =>
       x.id === currentId ? accent() : "rgba(128,128,128,0.45)");
@@ -904,8 +927,8 @@ error: Supabase credentials not set</pre>
     $("sum-exercises").innerHTML = ids.map((exId) => {
       const mine = rows.filter((r) => r.exercise_id === exId);
       const theirs = prevRows.filter((r) => r.exercise_id === exId);
-      const vol = Math.round(mine.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0));
-      const pVol = Math.round(theirs.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0));
+      const vol = Math.round(mine.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0));
+      const pVol = Math.round(theirs.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0));
       const best = Math.max(...mine.map((r) => r.weight));
       const gotPR = mine.some(isPR);
 
@@ -930,6 +953,10 @@ error: Supabase credentials not set</pre>
     stopTimer();
     const tick = () => {
       if (!current) return;
+      if (Date.now() - +new Date(current.started_at) > 24 * 3600 * 1000) {
+        $("timer").textContent = fmtDayKey(dayKey(current.started_at));
+        return;
+      }
       const t = Math.max(0, Math.floor((Date.now() - new Date(current.started_at).getTime()) / 1000));
       const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
       $("timer").textContent = h
@@ -1061,7 +1088,7 @@ error: Supabase credentials not set</pre>
     try {
       ({ data, error } = await withTimeout(
         supabase.from("exercises").insert({ name, day, user_id: userId })
-          .select("id,name,day,archived").single()
+          .select("id,name,day,archived,notes").single()
       ));
     } catch (err) {
       $("picker-msg").textContent = `Error: ${(err as Error).message}`;
@@ -1211,7 +1238,7 @@ error: Supabase credentials not set</pre>
           return `<li class="set-row set-editing" data-set="${s.id}">
             <div class="ed-grid">
               <label><span>Weight</span>
-                <input type="number" class="ed-weight" value="${s.weight}" step="0.5" min="0" inputmode="decimal" /></label>
+                <input type="number" class="ed-weight" value="${s.weight}" step="any" inputmode="decimal" /></label>
               <label><span>Reps</span>
                 <input type="number" class="ed-reps" value="${s.reps}" step="1" min="1" inputmode="numeric" /></label>
             </div>
@@ -1245,6 +1272,7 @@ error: Supabase credentials not set</pre>
                </span>`
             : `<button type="button" class="linkish remove-ex" data-ex="${exId}">remove</button>`}
         </header>
+        ${ex.notes ? `<p class="ex-note">${esc(ex.notes)}</p>` : ""}
         <ul class="set-list">${rows}</ul>
         <p class="hint">${prev
           ? `Set ${next} last time: <strong>${prev.weight}${prev.unit} × ${prev.reps}</strong>`
@@ -1252,7 +1280,7 @@ error: Supabase credentials not set</pre>
         <form class="log-form" data-ex="${exId}">
           <div class="log-inputs">
             <label><span>Weight</span>
-              <input type="number" class="in-weight" inputmode="decimal" step="0.5" min="0" required /></label>
+              <input type="number" class="in-weight" inputmode="decimal" step="any" required /></label>
             <label><span>Reps</span>
               <input type="number" class="in-reps" inputmode="numeric" step="1" min="1" required /></label>
             <label><span>Unit</span>
@@ -1300,6 +1328,7 @@ error: Supabase credentials not set</pre>
         supabase.from("sets").insert({
           user_id: userId, workout_id: current.id, exercise_id: exId,
           set_number: n, weight, reps, unit,
+          performed_at: current.started_at,
         }).select("id,workout_id,exercise_id,set_number,weight,unit,reps,performed_at").single()
       ));
     } catch (err) { say(`Error: ${(err as Error).message}`); return; }
@@ -1316,7 +1345,7 @@ error: Supabase credentials not set</pre>
     if (!li) return;
     const weight = parseFloat((<HTMLInputElement>li.querySelector(".ed-weight")).value);
     const reps = parseInt((<HTMLInputElement>li.querySelector(".ed-reps")).value, 10);
-    if (!(weight >= 0) || !(reps > 0)) { say("Weight and reps must be numbers."); return; }
+    if (!Number.isFinite(weight) || !(reps > 0)) { say("Weight and reps must be numbers."); return; }
 
     const { data, error } = await withTimeout(
       supabase.from("sets").update({ weight, reps }).eq("id", id)
@@ -1852,13 +1881,15 @@ error: Supabase credentials not set</pre>
       const rows = inDay.map((e) => {
         if (mgEditEx !== e.id) {
           return `<button type="button" class="mg-row mg-ex-edit" data-id="${e.id}">
-            <span class="mg-row-name">${esc(e.name)}</span>
+            <span class="mg-row-name">${esc(e.name)}${e.notes ? '<span class="mg-has-note">note</span>' : ""}</span>
             <span class="mg-row-hint">edit</span>
           </button>`;
         }
         const used = allSets.some((x) => x.exercise_id === e.id);
         return `<div class="mg-edit">
           <input type="text" class="me-name" value="${esc(e.name)}" aria-label="Exercise name" />
+          <textarea class="me-notes" rows="2" aria-label="Notes"
+            placeholder="Notes you want to see every time (grip, seat height, cues…)">${esc(e.notes ?? "")}</textarea>
           <fieldset class="me-days">
             <legend>Categories</legend>
             ${dayNames().map((n) => `<label class="me-day-opt">
@@ -1936,7 +1967,8 @@ error: Supabase credentials not set</pre>
       const name = host.querySelector<HTMLInputElement>(".me-name")!.value.trim();
       const picked = [...host.querySelectorAll<HTMLInputElement>(".me-day-box")]
         .filter((c) => c.checked).map((c) => c.value);
-      await saveExercise(b.dataset.id!, name, picked);
+      const notes = host.querySelector<HTMLTextAreaElement>(".me-notes")!.value.trim();
+      await saveExercise(b.dataset.id!, name, picked, notes);
     });
     on(".me-del", async (b) => {
       mgEditEx = null;
@@ -1992,13 +2024,13 @@ error: Supabase credentials not set</pre>
     });
   }
 
-  async function saveExercise(exId: string, name: string, picked: string[]) {
+  async function saveExercise(exId: string, name: string, picked: string[], notes = "") {
     if (!name) return;
     if (!picked.length) { mSay("Pick at least one category."); return; }
 
     const { error } = await withTimeout(
       // exercises.day keeps the first category so older rows stay sane.
-      supabase.from("exercises").update({ name, day: picked[0] }).eq("id", exId)
+      supabase.from("exercises").update({ name, day: picked[0], notes: notes || null }).eq("id", exId)
     );
     if (error) {
       mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
@@ -2019,7 +2051,7 @@ error: Supabase credentials not set</pre>
     }
 
     const e = exercises.find((x) => x.id === exId);
-    if (e) { e.name = name; e.day = picked[0]; }
+    if (e) { e.name = name; e.day = picked[0]; e.notes = notes || null; }
     exDays.set(exId, new Set(picked));
     exercises.sort((a, b) => a.name.localeCompare(b.name));
     mgEditEx = null;
@@ -2093,7 +2125,7 @@ error: Supabase credentials not set</pre>
     }
     const { data, error } = await withTimeout(
       supabase.from("exercises").insert({ name, day, user_id: userId })
-        .select("id,name,day,archived").single()
+        .select("id,name,day,archived,notes").single()
     );
     if (error) {
       mSay(error.message.includes("duplicate") ? `"${name}" already exists.` : `Error: ${error.message}`);
@@ -2180,7 +2212,7 @@ error: Supabase credentials not set</pre>
         .sort((a, b) => +new Date(a.started_at) - +new Date(b.started_at))
         .map((w) => {
           const rows = allSets.filter((s) => s.workout_id === w.id);
-          const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+          const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
           const time = new Date(w.started_at).toLocaleTimeString(undefined, {
             hour: "numeric", minute: "2-digit",
           });
@@ -2296,7 +2328,7 @@ error: Supabase credentials not set</pre>
     }
     $("history-list").innerHTML = done.map((w) => {
       const rows = allSets.filter((s) => s.workout_id === w.id);
-      const vol = Math.round(rows.reduce((t, r) => t + r.weight * r.reps, 0));
+      const vol = Math.round(rows.reduce((t, r) => t + vol(r.weight, r.reps), 0));
       const mins = Math.round((+new Date(w.ended_at!) - +new Date(w.started_at)) / 60000);
       return `<button type="button" class="hist-row" data-w="${w.id}">
         <span class="hist-day">${esc(w.day)}</span>
@@ -2366,7 +2398,7 @@ error: Supabase credentials not set</pre>
         const rs = byDay.get(k)!;
         return metric === "sets"
           ? rs.length
-          : Math.round(rs.reduce((t, r) => t + r.weight * r.reps, 0));
+          : Math.round(rs.reduce((t, r) => t + vol(r.weight, r.reps), 0));
       });
       label = metric === "sets" ? "Sets" : `Volume (${unit})`;
       labels = keys.map(fmtDayKey);
@@ -2394,7 +2426,7 @@ error: Supabase credentials not set</pre>
 
     const days = new Set(allSets.map((r) => dayKey(r.performed_at))).size;
     const totalVol = Math.round(
-      allSets.filter((r) => r.unit === unit).reduce((t, r) => t + r.weight * r.reps, 0)
+      allSets.filter((r) => r.unit === unit).reduce((t, r) => t + vol(r.weight, r.reps), 0)
     );
     $("overall-msg").textContent =
       `${plural(days, "session")} · ${plural(allSets.length, "set")} · ${totalVol} total volume (${unit})` +
@@ -2452,7 +2484,7 @@ error: Supabase credentials not set</pre>
     const labels = [...byDay.keys()].sort();
     const values = labels.map((d) => {
       const rs = byDay.get(d)!;
-      if (metric === "volume") return Math.round(rs.reduce((t, r) => t + r.weight * r.reps, 0));
+      if (metric === "volume") return Math.round(rs.reduce((t, r) => t + vol(r.weight, r.reps), 0));
       if (metric === "top") return Math.max(...rs.map((r) => r.weight));
       return Math.round(Math.max(...rs.map((r) => e1rm(r.weight, r.reps))));
     });
